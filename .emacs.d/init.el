@@ -57,10 +57,11 @@
 
 (package-initialize)
 
-;; load theme
-(load-theme 'zenburn t)
-
 (require 'use-package)
+
+(use-package zenburn-theme
+  :config
+  (load-theme 'zenburn t))
 
 (use-package ace-jump-mode
   :bind (("C-c SPC" . ace-jump-mode)))
