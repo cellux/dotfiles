@@ -9,6 +9,7 @@
  '(case-fold-search t)
  '(column-number-mode t)
  '(css-indent-offset 2)
+ '(dumb-jump-max-find-time 10)
  '(dumb-jump-prefer-searcher (quote rg))
  '(dumb-jump-selector (quote helm))
  '(gdb-many-windows nil)
@@ -25,9 +26,30 @@
  '(package-enable-at-startup nil)
  '(package-selected-packages
     (quote
-      (queue undo-tree gnu-elpa-keyring-update symex yaml-mode company-go go-mode forth-mode spinner flycheck-rust cargo lsp-ui lsp-mode company flycheck treemacs toml-mode rust-mode rainbow-delimiters json-mode iedit helpful realgud eyebrowse expand-region deadgrep ace-mc ace-jump-mode zenburn-theme use-package smart-jump paredit osc npm-mode markdown-mode magit-popup magit-find-file lua-mode js2-mode highlight helm-projectile helm-dash helm-ag go-eldoc ghub geiser)))
+      (clojure-mode-extra-font-locking flycheck-clang-analyzer flycheck-clang-tidy flycheck-clojure janet-mode queue undo-tree gnu-elpa-keyring-update symex yaml-mode company-go go-mode forth-mode spinner flycheck-rust cargo lsp-ui lsp-mode company flycheck treemacs toml-mode rust-mode rainbow-delimiters json-mode iedit helpful realgud eyebrowse expand-region deadgrep ace-mc ace-jump-mode zenburn-theme use-package smart-jump paredit osc npm-mode markdown-mode magit-popup magit-find-file lua-mode js2-mode highlight helm-projectile helm-dash helm-ag go-eldoc ghub geiser)))
  '(python-indent-offset 4)
  '(recentf-max-saved-items 50)
+ '(safe-local-variable-values
+    (quote
+      ((eval c-set-offset
+         (quote arglist-cont-nonempty)
+         (quote
+           (c-lineup-gcc-asm-reg c-lineup-arglist)))
+        (eval c-set-offset
+          (quote arglist-close)
+          0)
+        (eval c-set-offset
+          (quote arglist-intro)
+          (quote ++))
+        (eval c-set-offset
+          (quote case-label)
+          0)
+        (eval c-set-offset
+          (quote statement-case-open)
+          0)
+        (eval c-set-offset
+          (quote substatement-open)
+          0))))
  '(save-place-file (concat user-emacs-directory "places"))
  '(scroll-step 1)
  '(sh-basic-offset 2)
