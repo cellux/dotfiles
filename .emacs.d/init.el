@@ -155,7 +155,7 @@
   :hook (c++-mode . lsp))
 
 (use-package forth-mode
-  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'"))
+  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.g\\'"))
 
 (use-package extempore-mode
   :defer t
