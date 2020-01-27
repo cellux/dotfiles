@@ -157,6 +157,9 @@
 (use-package forth-mode
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.g\\'"))
 
+(use-package janet-mode
+  :mode ("\\.janet\\'"))
+
 (use-package extempore-mode
   :defer t
   :mode "\\.xtm\\'"
