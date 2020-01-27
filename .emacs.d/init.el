@@ -146,6 +146,14 @@
 
 (use-package lsp-ui)
 
+(use-package c-mode
+  :mode "\\.c\\'"
+  :hook (c-mode . lsp))
+
+(use-package c++-mode
+  :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
+  :hook (c++-mode . lsp))
+
 (use-package forth-mode
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'"))
 
