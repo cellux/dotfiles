@@ -169,6 +169,12 @@
 (use-package geiser
   :mode ("\\.scm\\'" . geiser-mode))
 
+(use-package clojure-mode
+  :mode ("\.clj\\'" . clojure-mode))
+
+(use-package cider
+  :defer t)
+
 (use-package symex
   :bind (("C-;" . symex-mode-interface)))
 
