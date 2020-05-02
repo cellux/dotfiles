@@ -1,7 +1,17 @@
+;; do not show startup screen
+(setq inhibit-startup-screen t)
+
+;; set location of automatically saved customizations
 (setq custom-file
   (expand-file-name "settings.el" user-emacs-directory))
 
-(load-file custom-file)
+;; I decided to configure everything here via use-package
+;(load-file custom-file)
+
+;; add $HOME/bin to exec-path
+(let ((user-bin-path (expand-file-name "~/bin")))
+  (unless (member user-bin-path exec-path)
+    (setq exec-path (append exec-path (list user-bin-path)))))
 
 ;; enable all commands
 (setq disabled-command-function nil)
@@ -16,6 +26,9 @@
 ;; highlight current line
 (hl-line-mode t)
 
+;; scroll by one line when reaching top/bottom of screen
+(setq scroll-step 1)
+
 ;; don't blink the cursor
 (blink-cursor-mode 0)
 
@@ -25,6 +38,18 @@
 ;; disable electric indent
 (electric-indent-mode 0)
 
+;; do not indent with tabs by default
+(setq-default indent-tabs-mode nil)
+
+;; use two spaces per tab stop
+(setq-default tab-width 2)
+
+;; indentation settings which may affect several modes
+(setq lisp-indent-offset 2)
+(setq c-basic-offset 2)
+(setq c-default-style "linux")
+(setq sh-basic-offset 2)
+
 ;; turn on syntax highlighting
 (global-font-lock-mode)
 
@@ -32,7 +57,11 @@
 ;; when the underlying file is changed on disk
 (global-auto-revert-mode t)
 
+;; do not make backup files
+(setq make-backup-files nil)
+
 ;; remember recently opened files
+(setq recentf-max-saved-items 50)
 (recentf-mode 1)
 
 ;; use the mouse wheel
@@ -42,10 +71,22 @@
 (line-number-mode 1)
 (column-number-mode 1)
 
+;; indicate empty lines beyond the end of file
+(setq-default indicate-empty-lines t)
+
 ;; show name of current buffer in frame title
 (setq frame-title-format "%f")
 
+;; searches and matches should ignore case
+(setq-default case-fold-search t)
+
+;; follows symlinks to version controlled files
+(setq vc-follow-symlinks t)
+
 ;;; packages
+
+;; do not activate all installed packages automatically
+(setq package-enable-at-startup nil)
 
 (require 'package)
 
@@ -55,13 +96,65 @@
 (add-to-list 'package-archives
   (cons "elpa" "https://elpa.gnu.org/packages/") t)
 
+(setq package-selected-packages
+  '(use-package
+     zenburn-theme
+     queue
+     spinner
+     company
+     rainbow-delimiters
+     iedit
+     highlight
+     treemacs
+     helpful
+     realgud
+     eyebrowse
+     expand-region
+     deadgrep
+     lispy
+     paredit
+     helm
+     iqa
+     projectile helm-projectile
+     helm-dash
+     helm-ag
+     hydra
+     sly helm-sly sly-asdf
+     flycheck
+     flycheck-clang-analyzer
+     flycheck-clang-tidy
+     clojure-mode cider flycheck-clojure
+     janet-mode
+     undo-tree
+     yaml-mode
+     go-mode company-go
+     forth-mode
+     rust-mode cargo flycheck-rust
+     lsp-mode lsp-ui
+     toml-mode
+     json-mode
+     ace-mc ace-jump-mode
+     smart-jump dumb-jump
+     osc
+     markdown-mode
+     magit
+     lua-mode
+     js2-mode
+     npm-mode
+     geiser))
+
+;; initialize Emacs package manager
 (package-initialize)
 
 (require 'use-package)
 
 (use-package zenburn-theme
   :config
-  (load-theme 'zenburn t))
+  (progn
+    (load-theme 'zenburn t)
+    (set-frame-font
+      (font-spec :name "Droid Sans Mono" :size 15)
+      nil t)))
 
 (use-package ace-jump-mode
   :bind (("C-c SPC" . ace-jump-mode)))
@@ -75,12 +168,17 @@
 
 ;; save/restore last cursor position in edited files
 (use-package saveplace
+  :init
+  (setq save-place-file (concat user-emacs-directory "places"))
   :config
   (save-place-mode 1))
 
 (use-package helpful
   :bind (("C-h f" . helpful-function)
          ("C-h v" . helpful-variable)))
+
+;; helper for quickly opening this file
+(use-package iqa)
 
 (use-package helm
   :bind (("M-x" . helm-M-x)
@@ -103,6 +201,13 @@
 
 (use-package deadgrep
   :bind ("M-<f7>" . deadgrep))
+
+(use-package dumb-jump
+  :config
+  (setq
+    dumb-jump-max-find-time 10
+    dumb-jump-prefer-searcher (quote rg)
+    dumb-jump-selector (quote helm)))
 
 (use-package smart-jump
   :config
@@ -129,6 +234,12 @@
 (use-package magit
   :bind (("C-x g" . magit-status)))
 
+(use-package gdb-mi
+  :config
+  (setq
+    gdb-many-windows nil
+    gdb-show-main t))
+
 (use-package realgud
   :defer t)
 
@@ -142,7 +253,10 @@
 
 (use-package lsp-mode
   :commands lsp
-  :config (require 'lsp-clients))
+  :config
+  (progn
+    (require 'lsp-clients)
+    (setq lsp-enable-snippet nil)))
 
 (use-package lsp-ui)
 
@@ -155,7 +269,7 @@
   :hook (c++-mode . lsp))
 
 (use-package forth-mode
-  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.g\\'"))
+  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
 
 (use-package janet-mode
   :mode ("\\.janet\\'"))
@@ -167,7 +281,8 @@
   (setq user-extempore-directory "/usr/bin/"))
 
 (use-package geiser
-  :mode ("\\.scm\\'" . geiser-mode))
+  :mode ("\\.scm\\'" . geiser-mode)
+  :init (setq geiser-chicken--binary "chicken-csi"))
 
 (use-package clojure-mode
   :mode ("\.clj\\'" . clojure-mode))
@@ -226,7 +341,12 @@
 (use-package python-mode
   :mode "\\.py\\'"
   :interpreter "python"
+  :config (setq python-indent-offset 4)
   :hook (python-mode . lsp))
+
+(use-package sly
+  :commands sly
+  :config (setq inferior-lisp-program "sbcl-rb"))
 
 (use-package llvm-mode
   ; did not find this package on MELPA
@@ -234,19 +354,25 @@
   :mode ("\\.ir\\'" "\\.ll\\'"))
 
 (use-package css-mode
-  :mode "\\.css\\'")
+  :mode "\\.css\\'"
+  :config (setq css-indent-offset 2))
 
 (use-package web-mode
   :commands web-mode)
 
 (use-package js2-mode
-  :mode "\\.js\\'")
+  :mode "\\.js\\'"
+  :config
+  (setq
+    js-indent-level 2
+    js2-bounce-indent-p nil))
 
 (use-package json-mode
   :mode "\\.json\\'")
 
 (use-package sonic-pi
-  :defer t)
+  :defer t
+  :init (setq sonic-pi-path "/usr/lib/sonic-pi/"))
 
 (use-package rasid-mode
   :defer t
@@ -261,3 +387,16 @@
   :load-path "/home/rb/zz/src/github.com/cellux/floyd"
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
+
+(use-package acme-mode
+  :defer t
+  :mode "\\.a\\'"
+  :load-path "/home/rb/src/acme-mode")
+
+(use-package hydra
+  :config
+  (progn
+    (defhydra hydra-rb ()
+      "rb tools"
+      ("1" iqa-find-user-init-file "init.el"))
+    (global-set-key (kbd "C-c <tab>") 'hydra-rb/body)))
