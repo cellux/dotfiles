@@ -45,7 +45,6 @@
 (setq-default tab-width 2)
 
 ;; indentation settings which may affect several modes
-(setq lisp-indent-offset 2)
 (setq c-basic-offset 2)
 (setq c-default-style "linux")
 (setq sh-basic-offset 2)
