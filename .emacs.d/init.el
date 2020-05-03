@@ -347,6 +347,13 @@
   :commands sly
   :config (setq inferior-lisp-program "sbcl-rb"))
 
+(use-package lispy-mode
+  :hook (emacs-lisp-mode
+         lisp-mode
+         clojure-mode
+         scheme-mode
+         extempore-mode))
+
 (use-package llvm-mode
   ; did not find this package on MELPA
   :disabled t
