@@ -97,50 +97,50 @@
 
 (setq package-selected-packages
   '(use-package
-     zenburn-theme
-     queue
-     spinner
-     company
-     rainbow-delimiters
-     iedit
-     highlight
-     treemacs
-     helpful
-     realgud
-     eyebrowse
-     expand-region
-     deadgrep
-     lispy
-     paredit
-     helm
-     iqa
-     projectile helm-projectile
-     helm-dash
-     helm-ag
-     hydra
-     sly helm-sly sly-asdf
-     flycheck
-     flycheck-clang-analyzer
-     flycheck-clang-tidy
-     clojure-mode cider flycheck-clojure
-     janet-mode
-     undo-tree
-     yaml-mode
-     go-mode company-go
-     forth-mode
-     rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui
-     toml-mode
-     json-mode
-     ace-mc ace-jump-mode
-     smart-jump dumb-jump
-     osc
-     markdown-mode
-     magit
-     lua-mode
-     js2-mode
-     npm-mode
-     geiser))
+    zenburn-theme
+    queue
+    spinner
+    company
+    rainbow-delimiters
+    iedit
+    highlight
+    treemacs
+    helpful
+    realgud
+    eyebrowse
+    expand-region
+    deadgrep
+    lispy
+    paredit
+    helm
+    iqa
+    projectile helm-projectile
+    helm-dash
+    helm-ag
+    hydra
+    sly helm-sly sly-asdf
+    flycheck
+    flycheck-clang-analyzer
+    flycheck-clang-tidy
+    clojure-mode cider flycheck-clojure
+    janet-mode
+    undo-tree
+    yaml-mode
+    go-mode company-go
+    forth-mode
+    rust-mode cargo flycheck-rust
+    lsp-mode lsp-ui
+    toml-mode
+    json-mode
+    ace-mc ace-jump-mode
+    smart-jump dumb-jump
+    osc
+    markdown-mode
+    magit
+    lua-mode
+    js2-mode
+    npm-mode
+    geiser))
 
 ;; initialize Emacs package manager
 (package-initialize)
@@ -167,8 +167,8 @@
 
 ;; save/restore last cursor position in edited files
 (use-package saveplace
-  :init
-  (setq save-place-file (concat user-emacs-directory "places"))
+  :custom
+  (save-place-file (concat user-emacs-directory "places"))
   :config
   (save-place-mode 1))
 
@@ -181,8 +181,8 @@
 
 (use-package helm
   :bind (("M-x" . helm-M-x)
-          ("C-x C-f" . helm-find-files)
-          ("C-o" . helm-recentf))
+         ("C-x C-f" . helm-find-files)
+         ("C-o" . helm-recentf))
   :config
   (helm-mode 1))
 
@@ -202,11 +202,10 @@
   :bind ("M-<f7>" . deadgrep))
 
 (use-package dumb-jump
-  :config
-  (setq
-    dumb-jump-max-find-time 10
-    dumb-jump-prefer-searcher (quote rg)
-    dumb-jump-selector (quote helm)))
+  :custom
+  (dumb-jump-max-find-time 10)
+  (dumb-jump-prefer-searcher 'rg)
+  (dumb-jump-selector 'helm))
 
 (use-package smart-jump
   :config
@@ -234,10 +233,9 @@
   :bind (("C-x g" . magit-status)))
 
 (use-package gdb-mi
-  :config
-  (setq
-    gdb-many-windows nil
-    gdb-show-main t))
+  :custom
+  (gdb-many-windows nil)
+  (gdb-show-main t))
 
 (use-package realgud
   :defer t)
@@ -247,15 +245,15 @@
 
 (use-package company
   :hook (prog-mode . company-mode)
-  :config (setq company-tooltip-align-annotations t)
-          (setq company-minimum-prefix-length 1))
+  :custom
+  (company-tooltip-align-annotations t)
+  (company-minimum-prefix-length 1))
 
 (use-package lsp-mode
   :commands lsp
-  :config
-  (progn
-    (require 'lsp-clients)
-    (setq lsp-enable-snippet nil)))
+  :config (require 'lsp-clients)
+  :custom
+  (lsp-enable-snippet nil))
 
 (use-package lsp-ui)
 
@@ -340,12 +338,12 @@
 (use-package python-mode
   :mode "\\.py\\'"
   :interpreter "python"
-  :config (setq python-indent-offset 4)
+  :custom (python-indent-offset 4)
   :hook (python-mode . lsp))
 
 (use-package sly
   :commands sly
-  :config (setq inferior-lisp-program "sbcl-rb"))
+  :custom (inferior-lisp-program "sbcl-rb"))
 
 (use-package lispy-mode
   :hook (emacs-lisp-mode
@@ -361,24 +359,24 @@
 
 (use-package css-mode
   :mode "\\.css\\'"
-  :config (setq css-indent-offset 2))
+  :custom (css-indent-offset 2))
 
 (use-package web-mode
   :commands web-mode)
 
 (use-package js2-mode
   :mode "\\.js\\'"
-  :config
-  (setq
-    js-indent-level 2
-    js2-bounce-indent-p nil))
+  :custom
+  (js-indent-level 2)
+  (js2-bounce-indent-p nil))
 
 (use-package json-mode
   :mode "\\.json\\'")
 
 (use-package sonic-pi
   :defer t
-  :init (setq sonic-pi-path "/usr/lib/sonic-pi/"))
+  :init
+  (setq sonic-pi-path "/usr/lib/sonic-pi/"))
 
 (use-package rasid-mode
   :defer t
@@ -408,5 +406,6 @@
       ("S" (dired "~/src") "src")
       ("i" iqa-find-user-init-file "init.el")
       ("p" (package-list-packages) "packages")
-      ("q" (dired "~/quicklisp/local-projects") "quicklisp"))
+      ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
+      ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
     (global-set-key (kbd "C-c <tab>") 'hydra-rb/body)))
