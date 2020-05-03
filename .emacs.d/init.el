@@ -397,5 +397,9 @@
   (progn
     (defhydra hydra-rb ()
       "rb tools"
-      ("1" iqa-find-user-init-file "init.el"))
+      ("P" (dired "~/projects") "projects")
+      ("S" (dired "~/src") "src")
+      ("i" iqa-find-user-init-file "init.el")
+      ("p" (package-list-packages) "packages")
+      ("q" (dired "~/quicklisp/local-projects") "quicklisp"))
     (global-set-key (kbd "C-c <tab>") 'hydra-rb/body)))
