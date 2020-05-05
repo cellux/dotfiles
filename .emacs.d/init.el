@@ -97,50 +97,51 @@
 
 (setq package-selected-packages
   '(use-package
-    zenburn-theme
-    queue
-    spinner
-    company
-    rainbow-delimiters
-    iedit
-    highlight
-    treemacs
-    helpful
-    realgud
-    eyebrowse
-    expand-region
-    deadgrep
-    lispy
-    paredit
-    helm
-    iqa
-    projectile helm-projectile
-    helm-dash
-    helm-ag
-    hydra
-    sly helm-sly sly-asdf
-    flycheck
-    flycheck-clang-analyzer
-    flycheck-clang-tidy
-    clojure-mode cider flycheck-clojure
-    janet-mode
-    undo-tree
-    yaml-mode
-    go-mode company-go
-    forth-mode
-    rust-mode cargo flycheck-rust
-    lsp-mode lsp-ui
-    toml-mode
-    json-mode
-    ace-mc ace-jump-mode
-    smart-jump dumb-jump
-    osc
-    markdown-mode
-    magit
-    lua-mode
-    js2-mode
-    npm-mode
-    geiser))
+     zenburn-theme
+     queue
+     spinner
+     company
+     rainbow-delimiters
+     iedit
+     highlight
+     treemacs
+     helpful
+     realgud
+     eyebrowse
+     expand-region
+     deadgrep
+     lispy
+     paredit
+     helm
+     iqa
+     projectile helm-projectile
+     helm-dash
+     helm-ag
+     hydra
+     sly helm-sly sly-asdf
+     flycheck
+     flycheck-clang-analyzer
+     flycheck-clang-tidy
+     clojure-mode cider flycheck-clojure
+     janet-mode
+     undo-tree
+     yaml-mode
+     go-mode company-go
+     forth-mode
+     rust-mode cargo flycheck-rust
+     lsp-mode lsp-ui
+     toml-mode
+     json-mode
+     ace-mc ace-jump-mode
+     smart-jump dumb-jump
+     osc
+     markdown-mode
+     magit
+     lua-mode
+     js2-mode
+     npm-mode
+     geiser
+     systemd))
 
 ;; initialize Emacs package manager
 (package-initialize)
