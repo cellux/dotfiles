@@ -208,6 +208,7 @@
   (dumb-jump-prefer-searcher 'rg)
   (dumb-jump-selector 'helm)
   :bind (("M-." . dumb-jump-go)
+         ("C-x 4 M-." . dumb-jump-go-other-window)
          ("M-," . dumb-jump-back)))
 
 (use-package smart-jump
