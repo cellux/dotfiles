@@ -339,8 +339,7 @@
 (use-package python-mode
   :mode "\\.py\\'"
   :interpreter "python"
-  :custom (python-indent-offset 4)
-  :hook (python-mode . lsp))
+  :custom (python-indent-offset 4))
 
 (use-package sly
   :commands sly
