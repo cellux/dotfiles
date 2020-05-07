@@ -206,7 +206,9 @@
   :custom
   (dumb-jump-max-find-time 10)
   (dumb-jump-prefer-searcher 'rg)
-  (dumb-jump-selector 'helm))
+  (dumb-jump-selector 'helm)
+  :bind (("M-." . dumb-jump-go)
+         ("M-," . dumb-jump-back)))
 
 (use-package smart-jump
   :config
