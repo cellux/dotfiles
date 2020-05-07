@@ -410,4 +410,4 @@
       ("p" (package-list-packages) "packages")
       ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
       ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
-    (global-set-key (kbd "C-c <tab>") 'hydra-rb/body)))
+    (global-set-key (kbd "<f12>") 'hydra-rb/body)))
