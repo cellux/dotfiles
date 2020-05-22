@@ -118,7 +118,7 @@
      helm-dash
      helm-ag
      hydra
-     sly helm-sly sly-asdf
+     sly helm-sly sly-asdf sly-quicklisp
      flycheck
      flycheck-clang-analyzer
      flycheck-clang-tidy
@@ -350,6 +350,12 @@
            (seq-find (lambda (binary-name)
                        (locate-file binary-name exec-path nil 'executable))
                      '("sbcl-rb" "sbcl"))))
+
+(use-package sly-asdf
+  :after sly)
+
+(use-package sly-quicklisp
+  :after sly)
 
 (use-package lispy-mode
   :hook (emacs-lisp-mode
