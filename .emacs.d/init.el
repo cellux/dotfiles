@@ -346,7 +346,10 @@
 
 (use-package sly
   :commands sly
-  :custom (inferior-lisp-program "sbcl-rb"))
+  :custom (inferior-lisp-program
+           (seq-find (lambda (binary-name)
+                       (locate-file binary-name exec-path nil 'executable))
+                     '("sbcl-rb" "sbcl"))))
 
 (use-package lispy-mode
   :hook (emacs-lisp-mode
