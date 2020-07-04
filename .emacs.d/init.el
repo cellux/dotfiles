@@ -349,7 +349,24 @@
   :custom (inferior-lisp-program
            (seq-find (lambda (binary-name)
                        (locate-file binary-name exec-path nil 'executable))
-                     '("sbcl-rb" "sbcl"))))
+                     '("sbcl-rb" "sbcl")))
+  :init
+  (add-hook 'sly-mrepl-mode-hook
+            (lambda ()
+              (define-key sly-mode-map (kbd "C-c C-z") 'rb-sly-mrepl))))
+
+(defun rb-sly-mrepl ()
+  (interactive)
+  (require 'sly)
+  (unless (sly-current-connection)
+    (sly))
+  (let* ((buf (current-buffer))
+         (bufname (buffer-name buf)))
+    (if (string-prefix-p "*sly-mrepl" bufname)
+        (switch-to-buffer nil)
+      (command-execute 'sly-mrepl))))
+
+(global-set-key (kbd "C-c C-z") 'rb-sly-mrepl)
 
 (use-package sly-asdf
   :after sly)
