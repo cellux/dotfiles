@@ -129,7 +129,7 @@
      go-mode company-go
      forth-mode
      rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui
+     lsp-mode lsp-ui lsp-treemacs helm-lsp
      toml-mode
      json-mode
      ace-mc ace-jump-mode
@@ -255,11 +255,17 @@
 
 (use-package lsp-mode
   :commands lsp
-  :config (require 'lsp-clients)
   :custom
   (lsp-enable-snippet nil))
 
-(use-package lsp-ui)
+(use-package lsp-ui
+  :commands lsp-ui-mode)
+
+(use-package lsp-treemacs
+  :commands lsp-treemacs-errors-list)
+
+(use-package helm-lsp
+  :commands helm-lsp-workspace-symbol)
 
 (use-package c-mode
   :mode "\\.c\\'"
