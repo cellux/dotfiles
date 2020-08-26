@@ -16,6 +16,12 @@
 ;; enable all commands
 (setq disabled-command-function nil)
 
+(let ((mib (* 1024 1024)))
+  ;; allow more consing between garbage collections
+  (setq gc-cons-threshold (max gc-cons-threshold (* 128 mib)))
+  ;; maximum number of bytes to read from a subprocess in a single chunk
+  (setq read-process-output-max (max read-process-output-max (* 1 mib))))
+
 ;; default to utf-8
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8-unix)
