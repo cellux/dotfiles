@@ -65,6 +65,9 @@
 ;; do not make backup files
 (setq make-backup-files nil)
 
+;; do not create lock files
+(setq create-lockfiles nil)
+
 ;; remember recently opened files
 (setq recentf-max-saved-items 50)
 (recentf-mode 1)
