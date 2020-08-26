@@ -68,6 +68,13 @@
 ;; do not create lock files
 (setq create-lockfiles nil)
 
+;; all auto-save files shall go to /tmp
+(add-to-list
+ 'auto-save-file-name-transforms
+ `("\\`/\\([^/]*/\\)*\\([^/]*\\)\\'"
+   ,(concat temporary-file-directory "\\2") t)
+ :at-end)
+
 ;; remember recently opened files
 (setq recentf-max-saved-items 50)
 (recentf-mode 1)
