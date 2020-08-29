@@ -16,6 +16,12 @@
 ;; enable all commands
 (setq disabled-command-function nil)
 
+(let ((mib (* 1024 1024)))
+  ;; allow more consing between garbage collections
+  (setq gc-cons-threshold (max gc-cons-threshold (* 128 mib)))
+  ;; maximum number of bytes to read from a subprocess in a single chunk
+  (setq read-process-output-max (max read-process-output-max (* 1 mib))))
+
 ;; default to utf-8
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8-unix)
@@ -58,6 +64,16 @@
 
 ;; do not make backup files
 (setq make-backup-files nil)
+
+;; do not create lock files
+(setq create-lockfiles nil)
+
+;; all auto-save files shall go to /tmp
+(add-to-list
+ 'auto-save-file-name-transforms
+ `("\\`/\\([^/]*/\\)*\\([^/]*\\)\\'"
+   ,(concat temporary-file-directory "\\2") t)
+ :at-end)
 
 ;; remember recently opened files
 (setq recentf-max-saved-items 50)
@@ -129,7 +145,7 @@
      go-mode company-go
      forth-mode
      rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui
+     lsp-mode lsp-ui lsp-treemacs helm-lsp
      toml-mode
      json-mode
      ace-mc ace-jump-mode
@@ -255,11 +271,17 @@
 
 (use-package lsp-mode
   :commands lsp
-  :config (require 'lsp-clients)
   :custom
   (lsp-enable-snippet nil))
 
-(use-package lsp-ui)
+(use-package lsp-ui
+  :commands lsp-ui-mode)
+
+(use-package lsp-treemacs
+  :commands lsp-treemacs-errors-list)
+
+(use-package helm-lsp
+  :commands helm-lsp-workspace-symbol)
 
 (use-package c-mode
   :mode "\\.c\\'"
