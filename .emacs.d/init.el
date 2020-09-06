@@ -114,6 +114,7 @@
 (setq package-selected-packages
   '(use-package
      zenburn-theme
+     which-key
      queue
      spinner
      company
@@ -171,6 +172,10 @@
     (set-frame-font
       (font-spec :name "Droid Sans Mono" :size 15)
       nil t)))
+
+(use-package which-key
+  :config
+  (which-key-mode))
 
 (use-package ace-jump-mode
   :bind (("C-c SPC" . ace-jump-mode)))
