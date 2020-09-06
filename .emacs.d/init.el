@@ -401,7 +401,8 @@
          lisp-mode
          clojure-mode
          scheme-mode
-         extempore-mode))
+         extempore-mode
+         janet-mode))
 
 (use-package llvm-mode
   ; did not find this package on MELPA
