@@ -316,7 +316,10 @@
   :mode ("\.clj\\'" . clojure-mode))
 
 (use-package cider
-  :defer t)
+  :defer t
+  :config
+  (setq cider-repl-display-help-banner nil)
+  (setq nrepl-sync-request-timeout 60))
 
 (use-package symex
   :bind (("C-;" . symex-mode-interface)))
