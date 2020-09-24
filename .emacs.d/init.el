@@ -213,6 +213,8 @@
 
 (use-package projectile
   :bind-keymap ("C-c p" . projectile-command-map)
+  :custom
+  (projectile-switch-project-action #'projectile-dired)
   :config
   (projectile-mode 1))
 
