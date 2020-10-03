@@ -321,7 +321,7 @@
   :defer t
   :config
   (setq cider-repl-display-help-banner nil)
-  (setq nrepl-sync-request-timeout 60))
+  (setq nrepl-sync-request-timeout 600))
 
 (use-package symex
   :bind (("C-;" . symex-mode-interface)))
