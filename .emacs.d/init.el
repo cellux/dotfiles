@@ -407,6 +407,7 @@
   :after sly)
 
 (use-package lispy-mode
+  :custom (lispy-clojure-middleware-tests nil)
   :hook (emacs-lisp-mode
          lisp-mode
          clojure-mode
