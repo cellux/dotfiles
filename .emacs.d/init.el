@@ -364,8 +364,8 @@
     (let ((subject (thing-at-point 'word t)))
       (sclang-find-definitions subject)))
   :bind (:map sclang-mode-map
-          ("M-." . sclang:find-definition-at-point)
-          ("M-," . sclang-pop-definition-mark)))
+              ("M-." . sclang:find-definition-at-point)
+              ("M-," . sclang-pop-definition-mark)))
 
 (use-package php-mode
   :defer t
@@ -376,29 +376,47 @@
   :interpreter "python"
   :custom (python-indent-offset 4))
 
+(use-package lisp-mode
+  :bind (:map lisp-mode-map
+              ("C-c C-z" . rb-mrepl)))
+
+(defun rb-mrepl ()
+  (interactive)
+  (pcase major-mode
+    ('clojure-mode
+     (command-execute (if (cider-sessions)
+                          'cider-switch-to-repl-buffer
+                        'cider)))
+    ('lisp-mode
+     (command-execute (if (sly-current-connection)
+                          'sly-mrepl
+                        'sly)))
+    ('sly-mrepl-mode
+     (command-execute 'sly-switch-to-most-recent))
+    (_ (message "First switch to a Lisp or Clojure buffer." ))))
+
+(global-set-key (kbd "C-c C-z") 'rb-mrepl)
+
+(defun rb-sly-quit-lisp ()
+  (interactive)
+  (if (sly-current-connection)
+      (command-execute 'sly-quit-lisp)
+    (message "No current connection.")))
+
 (use-package sly
   :commands sly
-  :custom (inferior-lisp-program
-           (seq-find (lambda (binary-name)
-                       (locate-file binary-name exec-path nil 'executable))
-                     '("sbcl-rb" "sbcl")))
   :init
   (add-hook 'sly-mrepl-mode-hook
             (lambda ()
-              (define-key sly-mode-map (kbd "C-c C-z") 'rb-sly-mrepl))))
-
-(defun rb-sly-mrepl ()
-  (interactive)
-  (require 'sly)
-  (unless (sly-current-connection)
-    (sly))
-  (let* ((buf (current-buffer))
-         (bufname (buffer-name buf)))
-    (if (string-prefix-p "*sly-mrepl" bufname)
-        (switch-to-buffer nil)
-      (command-execute 'sly-mrepl))))
-
-(global-set-key (kbd "C-c C-z") 'rb-sly-mrepl)
+              (define-key sly-mode-map (kbd "C-c C-z") 'rb-mrepl)))
+  :custom
+  (inferior-lisp-program
+   (seq-find (lambda (binary-name)
+               (locate-file binary-name exec-path nil 'executable))
+             '("sbcl-rb" "sbcl")))
+  :bind
+  (:map sly-mode-map
+        ("C-c C-q" . rb-sly-quit-lisp)))
 
 (use-package sly-asdf
   :after sly)
