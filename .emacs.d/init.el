@@ -140,6 +140,7 @@
      flycheck-clang-analyzer
      flycheck-clang-tidy
      clojure-mode cider flycheck-clojure
+     groovy-mode
      janet-mode
      undo-tree
      yaml-mode
