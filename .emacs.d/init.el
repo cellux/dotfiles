@@ -153,6 +153,7 @@
      ace-mc ace-jump-mode
      smart-jump dumb-jump
      osc
+     csound-mode
      markdown-mode
      magit
      lua-mode
@@ -294,6 +295,9 @@
 (use-package c-mode
   :mode "\\.c\\'"
   :hook (c-mode . lsp))
+
+(use-package csound-mode
+  :mode "\\.csd\\'")
 
 (use-package c++-mode
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
