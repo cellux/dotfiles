@@ -236,7 +236,10 @@
          ("C-x 4 M-." . dumb-jump-go-other-window)
          ("M-," . dumb-jump-back)))
 
+(use-package xref)
+
 (use-package smart-jump
+  :after (xref)
   :config
   (smart-jump-setup-default-registers))
 
