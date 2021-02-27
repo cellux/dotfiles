@@ -306,6 +306,9 @@
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
   :hook (c++-mode . lsp))
 
+(use-package compile
+  :bind (("<f9>" . compile)))
+
 (use-package forth-mode
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
 
