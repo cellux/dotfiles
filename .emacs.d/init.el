@@ -323,7 +323,7 @@
 
 (use-package geiser
   :mode ("\\.scm\\'" . geiser-mode)
-  :init (setq geiser-chicken--binary "chicken-csi"))
+  :init (setq geiser-chicken-binary "chicken-csi"))
 
 (use-package clojure-mode
   :mode ("\.clj\\'" . clojure-mode))
