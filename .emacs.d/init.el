@@ -321,9 +321,14 @@
   :init
   (setq user-extempore-directory "/usr/bin/"))
 
+(use-package scheme-mode
+  :mode ("\\.scm\\'" . scheme-mode))
+
 (use-package geiser
-  :mode ("\\.scm\\'" . geiser-mode)
-  :init (setq geiser-chicken-binary "chicken-csi"))
+  :hook (scheme-mode . geiser-mode)
+  :init
+  (setq geiser-chicken-binary "chicken-csi")
+  (setq geiser-active-implementations '(chicken guile)))
 
 (use-package clojure-mode
   :mode ("\.clj\\'" . clojure-mode))
