@@ -50,6 +50,9 @@
 ;; use two spaces per tab stop
 (setq-default tab-width 2)
 
+;; tab key should auto-complete if current line is already indented
+(setq tab-always-indent 'complete)
+
 ;; indentation settings which may affect several modes
 (setq c-basic-offset 2)
 (setq c-default-style "linux")
