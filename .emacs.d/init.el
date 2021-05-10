@@ -132,7 +132,10 @@
      deadgrep
      lispy
      paredit
+     magit
      helm
+     ace-mc ace-jump-mode
+     smart-jump dumb-jump
      iqa
      projectile helm-projectile
      helm-dash
@@ -143,26 +146,25 @@
      flycheck-clang-analyzer
      flycheck-clang-tidy
      clojure-mode cider flycheck-clojure
-     groovy-mode
      janet-mode
+     scheme-mode geiser
+     groovy-mode
      undo-tree
-     yaml-mode
      go-mode company-go
+     python-mode
+     lua-mode
+     web-mode
+     js2-mode npm-mode
+     typescript-mode tide
      forth-mode
      rust-mode cargo flycheck-rust
      lsp-mode lsp-ui lsp-treemacs helm-lsp
+     yaml-mode
      toml-mode
      json-mode
-     ace-mc ace-jump-mode
-     smart-jump dumb-jump
      osc
      csound-mode
      markdown-mode
-     magit
-     lua-mode
-     js2-mode
-     npm-mode
-     geiser
      systemd))
 
 ;; initialize Emacs package manager
