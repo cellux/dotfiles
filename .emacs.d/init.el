@@ -169,6 +169,7 @@
 
 ;; initialize Emacs package manager
 (package-initialize)
+(package-install-selected-packages)
 
 (require 'use-package)
 
