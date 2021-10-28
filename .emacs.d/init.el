@@ -161,6 +161,7 @@
      json-mode
      osc
      csound-mode
+     tidal
      markdown-mode
      systemd))
 
@@ -304,6 +305,9 @@
 
 (use-package csound-mode
   :mode "\\.csd\\'")
+
+(use-package tidal-mode
+  :mode "\\.tidal\\'")
 
 (use-package c++-mode
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
