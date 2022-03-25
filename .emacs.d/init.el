@@ -202,7 +202,8 @@
 
 (use-package helpful
   :bind (("C-h f" . helpful-function)
-         ("C-h v" . helpful-variable)))
+         ("C-h v" . helpful-variable)
+         ("C-h C-h" . helpful-at-point)))
 
 ;; helper for quickly opening this file
 (use-package iqa)
@@ -285,6 +286,22 @@
   (company-tooltip-align-annotations t)
   (company-minimum-prefix-length 1))
 
+(use-package compile
+  :bind (("<f9>" . compile)))
+
+(use-package org
+  :config
+  (global-set-key (kbd "C-c l") #'org-store-link)
+  (global-set-key (kbd "C-c a") #'org-agenda)
+  (global-set-key (kbd "C-c c") #'org-capture)
+  :custom
+  (org-capture-templates (("t" "Task" entry (file+headline "incoming" "Tasks")
+                           nil)
+                          ("i" "Idea" entry (file+headline "incoming" "Ideas")
+                           nil))))
+
+;; programming modes
+
 (use-package lsp-mode
   :commands lsp
   :custom
@@ -313,9 +330,6 @@
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
   :hook (c++-mode . lsp))
 
-(use-package compile
-  :bind (("<f9>" . compile)))
-
 (use-package forth-mode
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
 
@@ -323,7 +337,6 @@
   :mode ("\\.janet\\'"))
 
 (use-package extempore-mode
-  :defer t
   :mode "\\.xtm\\'"
   :init
   (setq user-extempore-directory "/usr/bin/"))
@@ -350,7 +363,6 @@
   :bind (("C-;" . symex-mode-interface)))
 
 (use-package lua-mode
-  :defer t
   :mode "\\.lua\\'"
   :interpreter "lua")
 
@@ -391,7 +403,6 @@
               ("M-," . sclang-pop-definition-mark)))
 
 (use-package php-mode
-  :defer t
   :mode "\\.php[345]?\\'")
 
 (use-package python-mode
@@ -483,21 +494,18 @@
   (setq sonic-pi-path "/usr/lib/sonic-pi/"))
 
 (use-package rasid-mode
-  :defer t
   :mode "\\.rasid\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/rasid"
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package floyd-mode
-  :defer t
   :mode "\\.fld\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/floyd"
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package acme-mode
-  :defer t
   :mode "\\.a\\'"
   :load-path "/home/rb/src/acme-mode")
 
