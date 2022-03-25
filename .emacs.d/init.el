@@ -131,6 +131,7 @@
      paredit
      magit
      helm
+     org-jira org-super-agenda
      ace-mc ace-jump-mode
      smart-jump dumb-jump
      iqa
@@ -300,8 +301,13 @@
                             nil)
                            ("i" "Idea" entry (file+headline "incoming.org" "Ideas")
                             nil)))
-  (org-agenda-files '("~/org"))
+  (org-agenda-files '("~/org" "~/org/jira"))
   (org-refile-targets '((("tasks.org") . (:maxlevel . 1)))))
+
+(use-package org-jira
+  :custom
+  (jiralib-url (getenv "JIRA_URL"))
+  (org-jira-working-dir "~/org/jira"))
 
 ;; programming modes
 
