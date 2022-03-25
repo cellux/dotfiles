@@ -295,10 +295,13 @@
   (global-set-key (kbd "C-c a") #'org-agenda)
   (global-set-key (kbd "C-c c") #'org-capture)
   :custom
-  (org-capture-templates (("t" "Task" entry (file+headline "incoming" "Tasks")
-                           nil)
-                          ("i" "Idea" entry (file+headline "incoming" "Ideas")
-                           nil))))
+  (org-replace-disputed-keys t)
+  (org-capture-templates '(("t" "Task" entry (file+headline "incoming.org" "Tasks")
+                            nil)
+                           ("i" "Idea" entry (file+headline "incoming.org" "Ideas")
+                            nil)))
+  (org-agenda-files '("~/org"))
+  (org-refile-targets '((("tasks.org") . (:maxlevel . 1)))))
 
 ;; programming modes
 
