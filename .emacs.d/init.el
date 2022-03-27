@@ -224,7 +224,8 @@
   :custom
   (projectile-switch-project-action #'projectile-dired)
   :config
-  (projectile-mode 1))
+  (projectile-mode 1)
+  (add-to-list 'projectile-globally-ignored-directories "node_modules"))
 
 (use-package helm-projectile
   :config
