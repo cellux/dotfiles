@@ -98,6 +98,9 @@
 ;; follows symlinks to version controlled files
 (setq vc-follow-symlinks t)
 
+;; lookup auth info in Freedesktop Secret Service
+(setq auth-sources '((:source (:secrets default))))
+
 ;;; packages
 
 ;; do not activate all installed packages automatically
