@@ -311,7 +311,14 @@
 (use-package org-jira
   :custom
   (jiralib-url (getenv "JIRA_URL"))
-  (org-jira-working-dir "~/org/jira"))
+  (org-jira-working-dir "~/org/jira")
+  :init
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (when (org-element-map (org-element-parse-buffer) 'headline
+                      (lambda (headline)
+                        (member "JIRA" (org-element-property :tags headline))))
+                (org-jira-mode t)))))
 
 ;; programming modes
 
