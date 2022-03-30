@@ -301,9 +301,9 @@
   (global-set-key (kbd "C-c c") #'org-capture)
   :custom
   (org-replace-disputed-keys t)
-  (org-capture-templates '(("t" "Task" entry (file+headline "incoming.org" "Tasks")
+  (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks")
                             nil)
-                           ("i" "Idea" entry (file+headline "incoming.org" "Ideas")
+                           ("i" "Idea" entry (file+headline "ideas.org" "Ideas")
                             nil)))
   (org-agenda-files '("~/org" "~/org/jira"))
   (org-refile-targets '((("tasks.org") . (:maxlevel . 1)))))
