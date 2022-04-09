@@ -152,6 +152,7 @@
      groovy-mode
      undo-tree
      go-mode company-go
+     zig-mode
      python-mode
      lua-mode
      web-mode
@@ -408,6 +409,10 @@
           (unless (member go-bin-path exec-path)
             (setq exec-path (append exec-path (list go-bin-path)))))
   :hook (go-mode . lsp))
+
+(use-package zig-mode
+  :mode "\\.zig\\'"
+  :hook (zig-mode . lsp))
 
 (use-package sclang
   :load-path "/usr/share/emacs/site-lisp/SuperCollider"
