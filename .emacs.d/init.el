@@ -242,10 +242,7 @@
   :custom
   (dumb-jump-max-find-time 10)
   (dumb-jump-prefer-searcher 'rg)
-  (dumb-jump-selector 'helm)
-  :bind (("M-." . dumb-jump-go)
-         ("C-x 4 M-." . dumb-jump-go-other-window)
-         ("M-," . dumb-jump-back)))
+  (dumb-jump-selector 'helm))
 
 (use-package xref)
 
