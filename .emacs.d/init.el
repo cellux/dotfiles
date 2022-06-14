@@ -485,6 +485,7 @@
   :custom (css-indent-offset 2))
 
 (use-package web-mode
+  :mode ("\\.[jt]sx\\'")
   :commands web-mode)
 
 (use-package js2-mode
@@ -495,6 +496,17 @@
 
 (use-package json-mode
   :mode "\\.json\\'")
+
+(use-package tide
+  :after (typescript-mode company flycheck)
+  :hook ((typescript-mode . tide-setup)
+         (typescript-mode . tide-hl-identifier-mode)
+         (before-save . tide-format-before-save)))
+
+(add-hook 'web-mode-hook
+          (lambda ()
+            (when (string-equal "tsx" (file-name-extension buffer-file-name))
+              (tide-setup))))
 
 (use-package sonic-pi
   :defer t
