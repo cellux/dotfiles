@@ -325,7 +325,12 @@
   :hook (c-mode . lsp))
 
 (use-package csound-mode
-  :mode "\\.csd\\'")
+  :mode "\\.csd\\'"
+  :custom
+  (csound-repl-sr 48000)
+  (csound-repl-ksmps 32)
+  (csound-repl-nchnls 2)
+  (csound-repl-0dbfs 1))
 
 (use-package tidal-mode
   :mode "\\.tidal\\'")
