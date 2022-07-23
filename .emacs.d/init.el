@@ -153,6 +153,7 @@
      undo-tree
      go-mode company-go
      zig-mode
+     nim-mode
      python-mode
      lua-mode
      web-mode
@@ -338,6 +339,12 @@
 (use-package c++-mode
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
   :hook (c++-mode . lsp))
+
+(use-package nim-mode
+  :mode ("\\.nim\\'"
+         "\\.nims\\'"
+         "\\.nimble\\'"
+         "\\`nim.cfg\\'"))
 
 (use-package forth-mode
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
