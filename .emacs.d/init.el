@@ -148,7 +148,7 @@
      flycheck-clang-tidy
      clojure-mode cider flycheck-clojure
      janet-mode
-     scheme-mode geiser
+     scheme-mode geiser geiser-chicken geiser-guile
      groovy-mode
      undo-tree
      go-mode company-go
