@@ -129,7 +129,6 @@
      realgud
      eyebrowse
      expand-region
-     deadgrep
      lispy
      paredit
      magit
@@ -140,7 +139,7 @@
      iqa
      projectile helm-projectile
      helm-dash
-     helm-ag
+     helm-ag rg
      hydra
      sly helm-sly sly-asdf sly-quicklisp
      flycheck
@@ -236,9 +235,6 @@
   :config
   (helm-projectile-on))
 
-(use-package deadgrep
-  :bind ("M-<f7>" . deadgrep))
-
 (use-package dumb-jump
   :custom
   (dumb-jump-max-find-time 10)
@@ -251,6 +247,10 @@
   :after (xref)
   :config
   (smart-jump-setup-default-registers))
+
+(use-package rg
+  :config
+  (rg-enable-default-bindings))
 
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
