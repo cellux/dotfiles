@@ -153,7 +153,7 @@
      go-mode company-go
      zig-mode
      nim-mode
-     python-mode
+     python-mode blacken
      lua-mode
      web-mode
      js2-mode npm-mode
@@ -429,6 +429,9 @@
   :mode "\\.py\\'"
   :interpreter "python"
   :custom (python-indent-offset 4))
+
+(use-package blacken
+  :hook (python-mode . blacken-mode))
 
 (use-package lisp-mode
   :bind (:map lisp-mode-map
