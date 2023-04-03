@@ -282,7 +282,9 @@
   :defer t)
 
 (use-package flycheck
-  :hook (prog-mode . flycheck-mode))
+  :hook (prog-mode . flycheck-mode)
+  :custom
+  (flycheck-disabled-checkers '(python-pycompile)))
 
 (use-package company
   :hook (prog-mode . company-mode)
