@@ -325,10 +325,6 @@
 (use-package helm-lsp
   :commands helm-lsp-workspace-symbol)
 
-(use-package c-mode
-  :mode "\\.c\\'"
-  :hook (c-mode . lsp))
-
 (use-package csound-mode
   :mode "\\.csd\\'"
   :custom
@@ -339,6 +335,10 @@
 
 (use-package tidal-mode
   :mode "\\.tidal\\'")
+
+(use-package c-mode
+  :mode "\\.c\\'"
+  :hook (c-mode . lsp))
 
 (use-package c++-mode
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
