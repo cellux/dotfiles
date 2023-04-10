@@ -345,10 +345,10 @@
   :hook (c++-mode . lsp))
 
 (use-package clang-format+
-  :hook (c-mode-common-hook . clang-format+-mode)
+  :hook (c-mode-common . clang-format+-mode)
   :custom
   (clang-format+-always-enable t)
-  (clang-format+-style "LLVM"))
+  (clang-format-style "LLVM"))
 
 (use-package cmake-mode
   :mode ("\\`CMakeLists\\.txt\\'"))
