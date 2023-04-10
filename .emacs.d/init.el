@@ -161,6 +161,7 @@
      forth-mode
      rust-mode cargo flycheck-rust
      lsp-mode lsp-ui lsp-treemacs helm-lsp
+     clang-format+
      yaml-mode
      toml-mode
      json-mode
@@ -341,6 +342,12 @@
 (use-package c++-mode
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
   :hook (c++-mode . lsp))
+
+(use-package clang-format+
+  :hook (c-mode-common-hook . clang-format+-mode)
+  :custom
+  (clang-format+-always-enable t)
+  (clang-format+-style "LLVM"))
 
 (use-package nim-mode
   :mode ("\\.nim\\'"
