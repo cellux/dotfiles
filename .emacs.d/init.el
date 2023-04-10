@@ -162,6 +162,7 @@
      rust-mode cargo flycheck-rust
      lsp-mode lsp-ui lsp-treemacs helm-lsp
      clang-format+
+     cmake-mode
      yaml-mode
      toml-mode
      json-mode
@@ -348,6 +349,9 @@
   :custom
   (clang-format+-always-enable t)
   (clang-format+-style "LLVM"))
+
+(use-package cmake-mode
+  :mode ("\\`CMakeLists\\.txt\\'"))
 
 (use-package nim-mode
   :mode ("\\.nim\\'"
