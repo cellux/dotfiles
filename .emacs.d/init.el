@@ -416,7 +416,8 @@
   :init (let ((go-bin-path (expand-file-name "~/go/bin")))
           (unless (member go-bin-path exec-path)
             (setq exec-path (append exec-path (list go-bin-path)))))
-  :hook (go-mode . lsp))
+  :hook ((go-mode . lsp)
+         (before-save . gofmt-before-save)))
 
 (use-package zig-mode
   :mode "\\.zig\\'"
