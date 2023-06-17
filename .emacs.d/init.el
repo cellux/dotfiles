@@ -307,7 +307,8 @@
   (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
                            ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
                            ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
-  (org-agenda-files '("~/org")))
+  (org-agenda-files '("~/org"))
+  (org-refile-targets '((org-agenda-files . (:level . 1)))))
 
 ;; programming modes
 
