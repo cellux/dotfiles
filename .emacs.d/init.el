@@ -124,10 +124,8 @@
      rainbow-delimiters
      iedit
      highlight
-     treemacs
      helpful
      realgud
-     eyebrowse
      expand-region
      lispy
      paredit
@@ -160,7 +158,7 @@
      typescript-mode tide
      forth-mode
      rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui lsp-treemacs helm-lsp
+     lsp-mode lsp-ui helm-lsp
      clang-format+
      cmake-mode
      yaml-mode
@@ -260,13 +258,6 @@
 (use-package iedit
   :defer t)
 
-(use-package eyebrowse
-  :config
-  (eyebrowse-mode t))
-
-(use-package treemacs
-  :commands treemacs)
-
 ; easily move between windows
 (use-package windmove
   :config
@@ -319,9 +310,6 @@
 
 (use-package lsp-ui
   :commands lsp-ui-mode)
-
-(use-package lsp-treemacs
-  :commands lsp-treemacs-errors-list)
 
 (use-package helm-lsp
   :commands helm-lsp-workspace-symbol)
