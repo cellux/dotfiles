@@ -120,13 +120,13 @@
      which-key
      queue
      spinner
-     company
      rainbow-delimiters
      iedit
      highlight
      helpful
      realgud
      expand-region
+     corfu
      lispy
      paredit
      magit
@@ -147,7 +147,7 @@
      scheme-mode geiser geiser-chicken geiser-guile
      groovy-mode
      undo-tree
-     go-mode company-go
+     go-mode
      zig-mode
      nim-mode
      python-mode blacken
@@ -241,6 +241,10 @@
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
 
+(use-package corfu
+  :init
+  (global-corfu-mode))
+
 (use-package iedit
   :defer t)
 
@@ -264,12 +268,6 @@
   :hook (prog-mode . flycheck-mode)
   :custom
   (flycheck-disabled-checkers '(python-pycompile)))
-
-(use-package company
-  :hook (prog-mode . company-mode)
-  :custom
-  (company-tooltip-align-annotations t)
-  (company-minimum-prefix-length 1))
 
 (use-package compile
   :bind (("<f9>" . compile)))
@@ -502,7 +500,7 @@
   :mode "\\.json\\'")
 
 (use-package tide
-  :after (typescript-mode company flycheck)
+  :after (typescript-mode flycheck)
   :hook ((typescript-mode . tide-setup)
          (typescript-mode . tide-hl-identifier-mode)
          (before-save . tide-format-before-save)))
