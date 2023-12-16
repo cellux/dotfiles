@@ -27,9 +27,6 @@
 ;; show matching parentheses
 (show-paren-mode 1)
 
-;; highlight current line
-(hl-line-mode t)
-
 ;; scroll by one line when reaching top/bottom of screen
 (setq scroll-step 1)
 
