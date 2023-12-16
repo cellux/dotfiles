@@ -133,7 +133,6 @@
      helm
      org-super-agenda
      ace-mc ace-jump-mode
-     smart-jump dumb-jump
      iqa
      projectile helm-projectile
      helm-dash
@@ -234,19 +233,6 @@
 (use-package helm-projectile
   :config
   (helm-projectile-on))
-
-(use-package dumb-jump
-  :custom
-  (dumb-jump-max-find-time 10)
-  (dumb-jump-prefer-searcher 'rg)
-  (dumb-jump-selector 'helm))
-
-(use-package xref)
-
-(use-package smart-jump
-  :after (xref)
-  :config
-  (smart-jump-setup-default-registers))
 
 (use-package rg
   :config
