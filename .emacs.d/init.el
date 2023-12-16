@@ -33,6 +33,9 @@
 ;; don't blink the cursor
 (blink-cursor-mode 0)
 
+;; no menubar
+(menu-bar-mode 0)
+
 ;; no toolbar
 (tool-bar-mode 0)
 
