@@ -142,7 +142,7 @@
      flycheck
      flycheck-clang-analyzer
      flycheck-clang-tidy
-     clojure-mode cider flycheck-clojure
+     clojure-mode cider flycheck-clojure clj-refactor
      janet-mode
      scheme-mode geiser geiser-chicken geiser-guile
      groovy-mode
