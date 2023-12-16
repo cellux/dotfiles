@@ -48,11 +48,6 @@
 ;; use two spaces per tab stop
 (setq-default tab-width 2)
 
-;; indentation settings which may affect several modes
-(setq c-basic-offset 2)
-(setq c-default-style "linux")
-(setq sh-basic-offset 2)
-
 ;; turn on syntax highlighting
 (global-font-lock-mode)
 
