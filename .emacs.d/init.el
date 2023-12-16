@@ -121,6 +121,7 @@
      queue
      spinner
      rainbow-delimiters
+     editorconfig
      iedit
      highlight
      helpful
@@ -196,6 +197,10 @@
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
+
+(use-package editorconfig
+  :config
+  (editorconfig-mode 1))
 
 ;; save/restore last cursor position in edited files
 (use-package saveplace
