@@ -9,9 +9,7 @@
 ;(load-file custom-file)
 
 ;; add $HOME/bin to exec-path
-(let ((user-bin-path (expand-file-name "~/bin")))
-  (unless (member user-bin-path exec-path)
-    (setq exec-path (append exec-path (list user-bin-path)))))
+(add-to-list 'exec-path (expand-file-name "~/bin"))
 
 ;; enable all commands
 (setq disabled-command-function nil)
