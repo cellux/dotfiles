@@ -129,12 +129,14 @@
      clojure-mode cider flycheck-clojure clj-refactor
      janet-mode
      geiser geiser-chicken geiser-guile
+     extempore-mode
      groovy-mode
      go-mode
      zig-mode
      nim-mode
      python-mode blacken
      lua-mode
+     php-mode
      web-mode
      js2-mode npm-mode
      typescript-mode tide
@@ -144,13 +146,14 @@
      dap-mode
      clang-format+
      cmake-mode
+     markdown-mode
      yaml-mode
      toml-mode
      json-mode
      osc
      csound-mode
+     sonic-pi
      tidal
-     markdown-mode
      systemd))
 
 ;; initialize Emacs package manager
@@ -393,7 +396,8 @@
 
 (use-package lisp-mode
   :bind (:map lisp-mode-map
-              ("C-c C-z" . rb-mrepl)))
+          ("C-c C-z" . rb-mrepl))
+  :custom (lisp-indent-offset 2))
 
 (defun rb-mrepl ()
   (interactive)
@@ -497,6 +501,9 @@
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
+(use-package langsam-mode
+  :mode "\\.l\\'"
+  :load-path "/home/rb/projects/langsam")
 
 (use-package hydra
   :config
