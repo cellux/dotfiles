@@ -128,7 +128,7 @@
      flycheck-clang-tidy
      clojure-mode cider flycheck-clojure clj-refactor
      janet-mode
-     scheme-mode geiser geiser-chicken geiser-guile
+     geiser geiser-chicken geiser-guile
      groovy-mode
      go-mode
      zig-mode
