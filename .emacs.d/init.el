@@ -42,7 +42,10 @@
 ;; disable electric indent
 (electric-indent-mode 0)
 
-;; do not indent with tabs by default
+;; try to indent first, auto-complete if already indented
+(setq tab-always-indent 'complete)
+
+;; indent with spaces by default
 (setq-default indent-tabs-mode nil)
 
 ;; use two spaces per tab stop
