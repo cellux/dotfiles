@@ -141,6 +141,7 @@
      forth-mode
      rust-mode cargo flycheck-rust
      lsp-mode lsp-ui helm-lsp
+     dap-mode
      clang-format+
      cmake-mode
      yaml-mode
@@ -265,6 +266,10 @@
 (use-package helm-lsp
   :commands helm-lsp-workspace-symbol)
 
+(use-package dap-mode
+  :custom
+  (dap-auto-configure-features '(sessions locals controls tooltip)))
+
 (use-package csound-mode
   :mode "\\.csd\\'"
   :custom
@@ -355,6 +360,8 @@
             (setq exec-path (append exec-path (list go-bin-path)))))
   :hook ((go-mode . lsp)
          (before-save . gofmt-before-save)))
+
+(use-package dap-dlv-go)
 
 (use-package zig-mode
   :mode "\\.zig\\'"
