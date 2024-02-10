@@ -108,25 +108,17 @@
   '(use-package
      zenburn-theme
      which-key
-     queue
-     spinner
      rainbow-delimiters
      editorconfig
-     iedit
      highlight
      helpful
      realgud
-     expand-region
-     corfu
      lispy
-     paredit
      magit
      helm
      org-super-agenda
-     ace-mc ace-jump-mode
      iqa
      projectile helm-projectile
-     helm-dash
      helm-ag rg
      hydra
      sly helm-sly sly-asdf sly-quicklisp
@@ -137,7 +129,6 @@
      janet-mode
      scheme-mode geiser geiser-chicken geiser-guile
      groovy-mode
-     undo-tree
      go-mode
      zig-mode
      nim-mode
@@ -178,13 +169,6 @@
   :config
   (which-key-mode))
 
-(use-package ace-jump-mode
-  :bind (("C-c SPC" . ace-jump-mode)))
-
-(use-package ace-mc
-  :bind (("C-(" . ace-mc-add-multiple-cursors)
-         ("C-M-(" . ace-mc-add-multiple-cursors)))
-
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
@@ -214,9 +198,6 @@
   :config
   (helm-mode 1))
 
-(use-package helm-dash
-  :commands helm-dash)
-
 (use-package projectile
   :bind-keymap ("C-c p" . projectile-command-map)
   :custom
@@ -232,16 +213,6 @@
 (use-package rg
   :config
   (rg-enable-default-bindings))
-
-(use-package expand-region
-  :bind ("C-=" . er/expand-region))
-
-(use-package corfu
-  :init
-  (global-corfu-mode))
-
-(use-package iedit
-  :defer t)
 
 ; easily move between windows
 (use-package windmove
@@ -355,9 +326,6 @@
   :config
   (setq cider-repl-display-help-banner nil)
   (setq nrepl-sync-request-timeout 600))
-
-(use-package symex
-  :bind (("C-;" . symex-mode-interface)))
 
 (use-package lua-mode
   :mode "\\.lua\\'"
@@ -522,9 +490,6 @@
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
-(use-package acme-mode
-  :mode "\\.a\\'"
-  :load-path "/home/rb/src/acme-mode")
 
 (use-package hydra
   :config
