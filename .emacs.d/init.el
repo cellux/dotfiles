@@ -110,6 +110,8 @@
 (setq package-selected-packages
   '(benchmark-init
      zenburn-theme
+     vertico
+     orderless
      which-key
      rainbow-delimiters
      editorconfig
@@ -118,14 +120,13 @@
      realgud
      lispy
      magit
-     helm
      org-super-agenda
      iqa
-     projectile helm-projectile
-     helm-ag rg
+     projectile
+     rg
      hydra
      vterm
-     sly helm-sly sly-asdf sly-quicklisp
+     sly sly-asdf sly-quicklisp
      flycheck
      flycheck-clang-analyzer
      flycheck-clang-tidy
@@ -145,7 +146,7 @@
      typescript-mode tide
      forth-mode
      rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui helm-lsp
+     lsp-mode lsp-ui
      dap-mode
      clang-format+
      cmake-mode
@@ -180,6 +181,17 @@
       (font-spec :name "Droid Sans Mono" :size 15)
       nil t)))
 
+(use-package vertico
+  :custom
+  (vertico-resize t)
+  :config
+  (vertico-mode))
+
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
 (use-package which-key
   :config
   (which-key-mode))
@@ -206,13 +218,6 @@
 ;; helper for quickly opening this file
 (use-package iqa)
 
-(use-package helm
-  :bind (("M-x" . helm-M-x)
-         ("C-x C-f" . helm-find-files)
-         ("C-o" . helm-recentf))
-  :config
-  (helm-mode 1))
-
 (use-package projectile
   :bind-keymap ("C-c p" . projectile-command-map)
   :custom
@@ -220,10 +225,6 @@
   :config
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
-
-(use-package helm-projectile
-  :config
-  (helm-projectile-on))
 
 (use-package rg
   :config
@@ -280,10 +281,6 @@
 (use-package lsp-ui
   :defer t
   :commands lsp-ui-mode)
-
-(use-package helm-lsp
-  :defer t
-  :commands helm-lsp-workspace-symbol)
 
 (use-package dap-mode
   :defer t
