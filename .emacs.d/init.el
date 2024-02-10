@@ -108,8 +108,7 @@
   (cons "elpa" "https://elpa.gnu.org/packages/") t)
 
 (setq package-selected-packages
-  '(use-package
-     benchmark-init
+  '(benchmark-init
      zenburn-theme
      which-key
      rainbow-delimiters
