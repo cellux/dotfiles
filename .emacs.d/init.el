@@ -112,6 +112,7 @@
      zenburn-theme
      vertico
      orderless
+     marginalia
      which-key
      rainbow-delimiters
      editorconfig
@@ -191,6 +192,10 @@
   :custom
   (completion-styles '(orderless basic))
   (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package marginalia
+  :config
+  (marginalia-mode))
 
 (use-package which-key
   :config
