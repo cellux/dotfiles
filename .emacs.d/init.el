@@ -121,6 +121,7 @@
      projectile helm-projectile
      helm-ag rg
      hydra
+     vterm
      sly helm-sly sly-asdf sly-quicklisp
      flycheck
      flycheck-clang-analyzer
