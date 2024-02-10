@@ -109,6 +109,7 @@
 
 (setq package-selected-packages
   '(use-package
+     benchmark-init
      zenburn-theme
      which-key
      rainbow-delimiters
@@ -166,6 +167,11 @@
 ;; (package-initialize)
 
 (require 'use-package)
+
+(use-package benchmark-init
+  :config
+  ;; To disable collection of benchmark data after init is done.
+  (add-hook 'after-init-hook 'benchmark-init/deactivate))
 
 (use-package zenburn-theme
   :config
