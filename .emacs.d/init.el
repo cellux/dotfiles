@@ -231,6 +231,7 @@
   :bind (("C-x g" . magit-status)))
 
 (use-package gdb-mi
+  :defer t
   :custom
   (gdb-many-windows nil)
   (gdb-show-main t))
@@ -239,6 +240,7 @@
   :defer t)
 
 (use-package flycheck
+  :defer t
   :hook (prog-mode . flycheck-mode)
   :custom
   (flycheck-disabled-checkers '(python-pycompile)))
@@ -247,6 +249,7 @@
   :bind (("<f9>" . compile)))
 
 (use-package org
+  :defer t
   :config
   (global-set-key (kbd "C-c l") #'org-store-link)
   (global-set-key (kbd "C-c a") #'org-agenda)
@@ -254,29 +257,34 @@
   :custom
   (org-replace-disputed-keys t)
   (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
-                           ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
-                           ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
+                            ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
+                            ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
   (org-agenda-files '("~/org"))
   (org-refile-targets '((org-agenda-files . (:level . 1)))))
 
 ;; programming modes
 
 (use-package lsp-mode
+  :defer t
   :commands lsp
   :custom
   (lsp-enable-snippet nil))
 
 (use-package lsp-ui
+  :defer t
   :commands lsp-ui-mode)
 
 (use-package helm-lsp
+  :defer t
   :commands helm-lsp-workspace-symbol)
 
 (use-package dap-mode
+  :defer t
   :custom
   (dap-auto-configure-features '(sessions locals controls tooltip)))
 
 (use-package csound-mode
+  :defer t
   :mode "\\.csd\\'"
   :custom
   (csound-repl-sr 48000)
@@ -285,52 +293,64 @@
   (csound-repl-0dbfs 1))
 
 (use-package tidal-mode
+  :defer t
   :mode "\\.tidal\\'")
 
 (use-package c-mode
+  :defer t
   :mode "\\.c\\'"
   :hook (c-mode . lsp))
 
 (use-package c++-mode
+  :defer t
   :mode ("\\.cc\\'" "\\.cpp\\'" "\\.cxx\\'")
   :hook (c++-mode . lsp))
 
 (use-package clang-format+
+  :defer t
   :hook (c-mode-common . clang-format+-mode)
   :custom
   (clang-format+-always-enable t)
   (clang-format-style "LLVM"))
 
 (use-package cmake-mode
+  :defer t
   :mode ("\\`CMakeLists\\.txt\\'"))
 
 (use-package nim-mode
+  :defer t
   :mode ("\\.nim\\'"
          "\\.nims\\'"
          "\\.nimble\\'"
          "\\`nim.cfg\\'"))
 
 (use-package forth-mode
+  :defer t
   :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
 
 (use-package janet-mode
+  :defer t
   :mode ("\\.janet\\'"))
 
 (use-package extempore-mode
+  :defer t
   :mode "\\.xtm\\'"
   :init
   (setq user-extempore-directory "/usr/bin/"))
 
 (use-package scheme-mode
+  :defer t
   :mode ("\\.scm\\'" . scheme-mode))
 
 (use-package geiser
+  :defer t
   :hook (scheme-mode . geiser-mode)
   :init
   (setq geiser-chicken-binary "chicken-csi")
   (setq geiser-active-implementations '(chicken guile)))
 
 (use-package clojure-mode
+  :defer t
   :mode ("\.clj\\'" . clojure-mode))
 
 (use-package cider
@@ -340,26 +360,33 @@
   (setq nrepl-sync-request-timeout 600))
 
 (use-package lua-mode
+  :defer t
   :mode "\\.lua\\'"
   :interpreter "lua")
 
 (use-package toml-mode
+  :defer t
   :mode "\\.toml\\'")
 
 (use-package yaml-mode
+  :defer t
   :mode "\\.ya?ml\\'")
 
 (use-package rust-mode
+  :defer t
   :mode "\\.rs\\'"
   :hook (rust-mode . lsp))
 
 (use-package cargo
+  :defer t
   :hook (rust-mode . cargo-minor-mode))
 
 (use-package flycheck-rust
+  :defer t
   :config (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
 
 (use-package go-mode
+  :defer t
   :mode "\\.go\\'"
   :init (let ((go-bin-path (expand-file-name "~/go/bin")))
           (unless (member go-bin-path exec-path)
@@ -367,13 +394,16 @@
   :hook ((go-mode . lsp)
          (before-save . gofmt-before-save)))
 
-(use-package dap-dlv-go)
+(use-package dap-dlv-go
+  :defer t)
 
 (use-package zig-mode
+  :defer t
   :mode "\\.zig\\'"
   :hook (zig-mode . lsp))
 
 (use-package sclang
+  :defer t
   :load-path "/usr/share/emacs/site-lisp/SuperCollider"
   :mode ("\\.sc\\'" . sclang-mode)
   :mode ("\\.scd\\'" . sclang-mode)
@@ -387,17 +417,21 @@
               ("M-," . sclang-pop-definition-mark)))
 
 (use-package php-mode
+  :defer t
   :mode "\\.php[345]?\\'")
 
 (use-package python-mode
+  :defer t
   :mode "\\.py\\'"
   :interpreter "python"
   :custom (python-indent-offset 4))
 
 (use-package blacken
+  :defer t
   :hook (python-mode . blacken-mode))
 
 (use-package lisp-mode
+  :defer t
   :bind (:map lisp-mode-map
           ("C-c C-z" . rb-mrepl))
   :custom (lisp-indent-offset 2))
@@ -426,6 +460,7 @@
     (message "No current connection.")))
 
 (use-package sly
+  :defer t
   :commands sly
   :init
   (add-hook 'sly-mrepl-mode-hook
@@ -441,9 +476,11 @@
         ("C-c C-q" . rb-sly-quit-lisp)))
 
 (use-package sly-asdf
+  :defer t
   :after sly)
 
 (use-package sly-quicklisp
+  :defer t
   :after sly)
 
 (use-package lispy-mode
@@ -455,28 +492,34 @@
          janet-mode))
 
 (use-package llvm-mode
-  ; did not find this package on MELPA
+  ;; did not find this package on MELPA
   :disabled t
+  :defer t
   :mode ("\\.ir\\'" "\\.ll\\'"))
 
 (use-package css-mode
+  :defer t
   :mode "\\.css\\'"
   :custom (css-indent-offset 2))
 
 (use-package web-mode
+  :defer t
   :mode ("\\.[jt]sx\\'")
   :commands web-mode)
 
 (use-package js2-mode
+  :defer t
   :mode "\\.js\\'"
   :custom
   (js-indent-level 2)
   (js2-bounce-indent-p nil))
 
 (use-package json-mode
+  :defer t
   :mode "\\.json\\'")
 
 (use-package tide
+  :defer t
   :after (typescript-mode flycheck)
   :hook ((typescript-mode . tide-setup)
          (typescript-mode . tide-hl-identifier-mode)
@@ -493,18 +536,21 @@
   (setq sonic-pi-path "/usr/lib/sonic-pi/"))
 
 (use-package rasid-mode
+  :defer t
   :mode "\\.rasid\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/rasid"
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package floyd-mode
+  :defer t
   :mode "\\.fld\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/floyd"
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package langsam-mode
+  :defer t
   :mode "\\.l\\'"
   :load-path "/home/rb/projects/langsam")
 
