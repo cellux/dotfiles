@@ -71,10 +71,6 @@
    ,(concat temporary-file-directory "\\2") t)
  :at-end)
 
-;; remember recently opened files
-(setq recentf-max-saved-items 50)
-(recentf-mode 1)
-
 ;; use the mouse wheel
 (mouse-wheel-mode t)
 
@@ -181,6 +177,13 @@
     (set-frame-font
       (font-spec :name "Droid Sans Mono" :size 15)
       nil t)))
+
+(use-package recentf
+  :custom
+  (recentf-max-saved-items 50)
+  :bind (("C-o" . recentf))
+  :config
+  (recentf-mode 1))
 
 (use-package vertico
   :custom
