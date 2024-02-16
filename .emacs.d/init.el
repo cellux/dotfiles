@@ -186,6 +186,10 @@
   (recentf-mode 1))
 
 (use-package vertico
+  :custom
+  (vertico-resize t)
+  (vertico-reverse-mode t)
+  (vertico-indexed-mode t)
   :config
   (vertico-mode))
 
