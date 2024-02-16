@@ -186,8 +186,6 @@
   (recentf-mode 1))
 
 (use-package vertico
-  :custom
-  (vertico-resize t)
   :config
   (vertico-mode))
 
