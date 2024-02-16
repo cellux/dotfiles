@@ -174,6 +174,10 @@
   :config
   (progn
     (load-theme 'zenburn t)
+    (zenburn-with-color-variables
+      (custom-theme-set-faces
+        'zenburn
+        `(vertico-current ((t (:inherit highlight :extend t))))))
     (set-frame-font
       (font-spec :name "Droid Sans Mono" :size 15)
       nil t)))
