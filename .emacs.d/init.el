@@ -393,7 +393,7 @@
 
 (use-package flycheck-rust
   :defer t
-  :config (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+  :hook (flycheck-mode . flycheck-rust-setup))
 
 (use-package go-mode
   :defer t
@@ -472,7 +472,7 @@
 (use-package sly
   :defer t
   :commands sly
-  :init
+  :config
   (add-hook 'sly-mrepl-mode-hook
             (lambda ()
               (define-key sly-mode-map (kbd "C-c C-z") 'rb-mrepl)))
