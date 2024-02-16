@@ -172,15 +172,17 @@
 
 (use-package zenburn-theme
   :config
-  (progn
-    (load-theme 'zenburn t)
-    (zenburn-with-color-variables
-      (custom-theme-set-faces
-        'zenburn
-        `(vertico-current ((t (:inherit highlight :extend t))))))
-    (set-frame-font
-      (font-spec :name "Droid Sans Mono" :size 15)
-      nil t)))
+  (load-theme 'zenburn t)
+  (zenburn-with-color-variables
+    (custom-theme-set-faces
+      'zenburn
+      `(vertico-current ((t (:inherit highlight :extend t))))
+      `(completions-annotations ((t (:foreground ,zenburn-fg-05))))))
+  (enable-theme 'zenburn))
+
+(set-frame-font
+  (font-spec :name "Droid Sans Mono" :size 15)
+  nil t 'inhibit-customize)
 
 (use-package recentf
   :custom
