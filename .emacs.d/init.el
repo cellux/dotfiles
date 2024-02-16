@@ -195,6 +195,8 @@
   (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package marginalia
+  :custom
+  (marginalia-align 'right)
   :config
   (marginalia-mode))
 
