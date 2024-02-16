@@ -413,6 +413,7 @@
   :hook (zig-mode . lsp))
 
 (use-package sclang
+  :if (file-accessible-directory-p "/usr/share/emacs/site-lisp/SuperCollider")
   :defer t
   :load-path "/usr/share/emacs/site-lisp/SuperCollider"
   :mode ("\\.sc\\'" . sclang-mode)
@@ -423,8 +424,8 @@
     (let ((subject (thing-at-point 'word t)))
       (sclang-find-definitions subject)))
   :bind (:map sclang-mode-map
-              ("M-." . sclang:find-definition-at-point)
-              ("M-," . sclang-pop-definition-mark)))
+          ("M-." . sclang:find-definition-at-point)
+          ("M-," . sclang-pop-definition-mark)))
 
 (use-package php-mode
   :defer t
@@ -541,11 +542,13 @@
               (tide-setup))))
 
 (use-package sonic-pi
+  :if (file-accessible-directory-p "/usr/lib/sonic-pi")
   :defer t
   :init
   (setq sonic-pi-path "/usr/lib/sonic-pi/"))
 
 (use-package rasid-mode
+  :if (file-accessible-directory-p "/home/rb/zz/src/github.com/cellux/rasid")
   :defer t
   :mode "\\.rasid\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/rasid"
@@ -553,6 +556,7 @@
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package floyd-mode
+  :if (file-accessible-directory-p "/home/rb/zz/src/github.com/cellux/floyd")
   :defer t
   :mode "\\.fld\\'"
   :load-path "/home/rb/zz/src/github.com/cellux/floyd"
@@ -560,6 +564,7 @@
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package langsam-mode
+  :if (file-accessible-directory-p "/home/rb/projects/langsam")
   :defer t
   :mode "\\.l\\'"
   :load-path "/home/rb/projects/langsam")
