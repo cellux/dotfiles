@@ -183,12 +183,20 @@
 (use-package simple
   :bind (("C-z" . undo)))
 
+;; keep track of recently used files
 (use-package recentf
   :custom
   (recentf-max-saved-items 50)
   :bind (("C-o" . recentf))
   :config
   (recentf-mode 1))
+
+;; save/restore last cursor position in edited files
+(use-package saveplace
+  :custom
+  (save-place-file (concat user-emacs-directory "places"))
+  :config
+  (save-place-mode 1))
 
 (use-package vertico
   :custom
@@ -220,13 +228,6 @@
 (use-package editorconfig
   :config
   (editorconfig-mode 1))
-
-;; save/restore last cursor position in edited files
-(use-package saveplace
-  :custom
-  (save-place-file (concat user-emacs-directory "places"))
-  :config
-  (save-place-mode 1))
 
 ;; lookup auth info in Freedesktop Secret Service
 (use-package auth-source
