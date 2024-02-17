@@ -30,9 +30,6 @@
 ;; scroll by one line when reaching top/bottom of screen
 (setq scroll-step 1)
 
-;; don't blink the cursor
-(blink-cursor-mode 0)
-
 ;; no menubar
 (menu-bar-mode 0)
 
@@ -174,9 +171,14 @@
       `(completions-annotations ((t (:foreground ,zenburn-fg-05))))))
   (enable-theme 'zenburn))
 
-(set-frame-font
-  (font-spec :name "Droid Sans Mono" :size 15)
-  nil t 'inhibit-customize)
+(use-package frame
+  :config
+  ;; set font
+  (set-frame-font
+    (font-spec :name "Droid Sans Mono" :size 15)
+    nil t 'inhibit-customize)
+  ;; don't blink the cursor
+  (blink-cursor-mode 0))
 
 (use-package simple
   :bind (("C-z" . undo)))
