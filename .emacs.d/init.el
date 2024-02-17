@@ -211,6 +211,7 @@
   (marginalia-mode))
 
 (use-package which-key
+  :bind (("C-h K" . which-key-show-top-level))
   :config
   (which-key-mode))
 
