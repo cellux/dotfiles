@@ -90,9 +90,6 @@
 ;; follows symlinks to version controlled files
 (setq vc-follow-symlinks t)
 
-;; lookup auth info in Freedesktop Secret Service
-(setq auth-sources '((:source (:secrets default))))
-
 ;;; packages
 
 (require 'package)
@@ -231,6 +228,11 @@
   (save-place-file (concat user-emacs-directory "places"))
   :config
   (save-place-mode 1))
+
+;; lookup auth info in Freedesktop Secret Service
+(use-package auth-source
+  :custom
+  (auth-sources '((:source (:secrets default)))))
 
 (use-package helpful
   :bind (("C-h f" . helpful-function)
