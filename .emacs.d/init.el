@@ -157,9 +157,6 @@
 ;; ensure all packages listed above are installed
 (package-install-selected-packages)
 
-;; load and activate all installed packages
-;; (package-initialize)
-
 (require 'use-package)
 
 (use-package benchmark-init
