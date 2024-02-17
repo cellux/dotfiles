@@ -184,6 +184,9 @@
   (font-spec :name "Droid Sans Mono" :size 15)
   nil t 'inhibit-customize)
 
+(use-package simple
+  :bind (("C-z" . undo)))
+
 (use-package recentf
   :custom
   (recentf-max-saved-items 50)
