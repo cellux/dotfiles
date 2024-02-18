@@ -466,8 +466,7 @@
 (use-package lisp-mode
   :defer t
   :bind (:map lisp-mode-map
-          ("C-c C-z" . rb-mrepl))
-  :custom (lisp-indent-offset 2))
+          ("C-c C-z" . rb-mrepl)))
 
 (defun rb-mrepl ()
   (interactive)
