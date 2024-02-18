@@ -183,6 +183,10 @@
 (use-package simple
   :bind (("C-z" . undo)))
 
+(use-package dired
+  :bind (:map dired-mode-map
+          ("E" . wdired-change-to-wdired-mode)))
+
 ;; keep track of recently used files
 (use-package recentf
   :custom
