@@ -464,48 +464,15 @@
   :hook (python-mode . blacken-mode))
 
 (use-package lisp-mode
-  :defer t
-  :bind (:map lisp-mode-map
-          ("C-c C-z" . rb-mrepl)))
-
-(defun rb-mrepl ()
-  (interactive)
-  (pcase major-mode
-    ('clojure-mode
-     (command-execute (if (cider-sessions)
-                          'cider-switch-to-repl-buffer
-                        'cider)))
-    ('lisp-mode
-     (command-execute (if (sly-current-connection)
-                          'sly-mrepl
-                        'sly)))
-    ('sly-mrepl-mode
-     (command-execute 'sly-switch-to-most-recent))
-    (_ (message "First switch to a Lisp or Clojure buffer." ))))
-
-(global-set-key (kbd "C-c C-z") 'rb-mrepl)
-
-(defun rb-sly-quit-lisp ()
-  (interactive)
-  (if (sly-current-connection)
-      (command-execute 'sly-quit-lisp)
-    (message "No current connection.")))
+  :defer t)
 
 (use-package sly
   :defer t
-  :commands sly
-  :config
-  (add-hook 'sly-mrepl-mode-hook
-            (lambda ()
-              (define-key sly-mode-map (kbd "C-c C-z") 'rb-mrepl)))
   :custom
   (inferior-lisp-program
    (seq-find (lambda (binary-name)
                (locate-file binary-name exec-path nil 'executable))
-             '("sbcl-rb" "sbcl")))
-  :bind
-  (:map sly-mode-map
-        ("C-c C-q" . rb-sly-quit-lisp)))
+             '("sbcl-rb" "sbcl"))))
 
 (use-package sly-asdf
   :defer t
