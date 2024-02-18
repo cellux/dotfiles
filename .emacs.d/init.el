@@ -162,33 +162,38 @@
   (add-hook 'after-init-hook 'benchmark-init/deactivate))
 
 (use-package zenburn-theme
+  :demand t
   :config
   (load-theme 'zenburn t)
   (zenburn-with-color-variables
     (custom-theme-set-faces
-      'zenburn
-      `(vertico-current ((t (:inherit highlight :extend t))))
-      `(completions-annotations ((t (:foreground ,zenburn-fg-05))))))
+     'zenburn
+     `(vertico-current ((t (:inherit highlight :extend t))))
+     `(completions-annotations ((t (:foreground ,zenburn-fg-05))))))
   (enable-theme 'zenburn))
 
 (use-package frame
+  :demand t
   :config
   ;; set font
   (set-frame-font
-    (font-spec :name "Droid Sans Mono" :size 15)
-    nil t 'inhibit-customize)
+   (font-spec :name "Droid Sans Mono" :size 15)
+   nil t 'inhibit-customize)
   ;; don't blink the cursor
   (blink-cursor-mode 0))
 
 (use-package simple
+  :demand t
   :bind (("C-z" . undo)))
 
 (use-package dired
+  :demand t
   :bind (:map dired-mode-map
-          ("E" . wdired-change-to-wdired-mode)))
+              ("E" . wdired-change-to-wdired-mode)))
 
 ;; keep track of recently used files
 (use-package recentf
+  :demand t
   :custom
   (recentf-max-saved-items 50)
   :bind (("C-o" . recentf))
@@ -197,12 +202,20 @@
 
 ;; save/restore last cursor position in edited files
 (use-package saveplace
+  :demand t
   :custom
   (save-place-file (concat user-emacs-directory "places"))
   :config
   (save-place-mode 1))
 
+; easily move between windows
+(use-package windmove
+  :demand t
+  :config
+  (windmove-default-keybindings))
+
 (use-package vertico
+  :demand t
   :custom
   (vertico-resize t)
   (vertico-reverse-mode t)
@@ -211,42 +224,51 @@
   (vertico-mode))
 
 (use-package orderless
+  :demand t
   :custom
   (completion-styles '(orderless basic))
   (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package marginalia
+  :demand t
   :custom
   (marginalia-align 'right)
   :config
   (marginalia-mode))
 
 (use-package which-key
+  :demand t
   :bind (("C-h K" . which-key-show-top-level))
   :config
   (which-key-mode))
 
 (use-package rainbow-delimiters
+  :defer t
   :hook (prog-mode . rainbow-delimiters-mode))
 
 (use-package editorconfig
+  :defer t
   :config
   (editorconfig-mode 1))
 
 ;; lookup auth info in Freedesktop Secret Service
 (use-package auth-source
+  :defer t
   :custom
   (auth-sources '((:source (:secrets default)))))
 
 (use-package helpful
+  :defer t
   :bind (("C-h f" . helpful-function)
          ("C-h v" . helpful-variable)
          ("C-h C-h" . helpful-at-point)))
 
 ;; helper for quickly opening this file
-(use-package iqa)
+(use-package iqa
+  :defer t)
 
 (use-package projectile
+  :defer t
   :bind-keymap ("C-c p" . projectile-command-map)
   :custom
   (projectile-switch-project-action #'projectile-dired)
@@ -255,15 +277,12 @@
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
 
 (use-package rg
+  :defer t
   :config
   (rg-enable-default-bindings))
 
-; easily move between windows
-(use-package windmove
-  :config
-  (windmove-default-keybindings))
-
 (use-package magit
+  :defer t
   :bind (("C-x g" . magit-status)))
 
 (use-package gdb-mi
@@ -282,6 +301,7 @@
   (flycheck-disabled-checkers '(python-pycompile)))
 
 (use-package compile
+  :demand t
   :bind (("<f9>" . compile)))
 
 (use-package org
@@ -483,6 +503,7 @@
   :after sly)
 
 (use-package lispy-mode
+  :defer t
   :hook (emacs-lisp-mode
          lisp-mode
          clojure-mode
@@ -558,6 +579,7 @@
   :load-path "/home/rb/projects/langsam")
 
 (use-package hydra
+  :demand t
   :config
   (progn
     (defhydra hydra-rb ()
