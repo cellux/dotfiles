@@ -217,8 +217,6 @@
 (use-package vertico
   :demand t
   :custom
-  (vertico-resize t)
-  (vertico-reverse-mode t)
   (vertico-indexed-mode t)
   :config
   (vertico-mode))
