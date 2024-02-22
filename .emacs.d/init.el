@@ -275,7 +275,7 @@
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
 
 (use-package rg
-  :defer t
+  :demand t
   :config
   (rg-enable-default-bindings))
 
