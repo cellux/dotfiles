@@ -522,8 +522,13 @@
 
 (use-package web-mode
   :defer t
-  :mode ("\\.[jt]sx\\'")
-  :commands web-mode)
+  :mode ("\\.[jt]sx\\'"
+         "\\.html\\'")
+  :custom
+  (web-mode-markup-indent-offset 2)
+  (web-mode-code-indent-offset 2)
+  (web-mode-css-indent-offset 2)
+  (web-mode-sql-indent-offset 2))
 
 (use-package js2-mode
   :defer t
