@@ -98,58 +98,61 @@
   (cons "elpa" "https://elpa.gnu.org/packages/") t)
 
 (setq package-selected-packages
-  '(benchmark-init
-     zenburn-theme
-     vertico
-     orderless
-     marginalia
-     which-key
-     rainbow-delimiters
-     editorconfig
-     highlight
-     helpful
-     realgud
-     lispy
-     magit
-     org-super-agenda
-     iqa
-     projectile
-     rg
-     hydra
-     vterm
-     sly sly-asdf sly-quicklisp
-     flycheck
-     flycheck-clang-analyzer
-     flycheck-clang-tidy
-     clojure-mode cider flycheck-clojure clj-refactor
-     janet-mode
-     geiser geiser-chicken geiser-guile
-     extempore-mode
-     groovy-mode
-     go-mode
-     zig-mode
-     nim-mode
-     python-mode blacken
-     lua-mode
-     php-mode
-     web-mode
-     js2-mode npm-mode
-     typescript-mode tide
-     forth-mode
-     rust-mode cargo flycheck-rust
-     lsp-mode lsp-ui
-     dap-mode
-     clang-format+
-     cmake-mode
-     markdown-mode
-     yaml-mode
-     toml-mode
-     json-mode
-     osc
-     csound-mode
-     sonic-pi
-     tidal
-     systemd))
+      '(benchmark-init
+        zenburn-theme
+        vertico
+        orderless
+        marginalia
+        consult
+        embark embark-consult
+        wgrep
+        which-key
+        rainbow-delimiters
+        editorconfig
+        highlight
+        helpful
+        realgud
+        lispy
+        magit
+        org-super-agenda
+        iqa
+        projectile
+        rg
+        hydra
+        vterm
+        sly sly-asdf sly-quicklisp
+        flycheck
+        flycheck-clang-analyzer
+        flycheck-clang-tidy
+        clojure-mode cider flycheck-clojure clj-refactor
+        janet-mode
+        geiser geiser-chicken geiser-guile
+        extempore-mode
+        groovy-mode
+        go-mode
+        zig-mode
+        nim-mode
+        python-mode blacken
+        lua-mode
+        php-mode
+        web-mode
+        js2-mode npm-mode
+        typescript-mode tide
+        forth-mode
+        rust-mode cargo flycheck-rust
+        lsp-mode lsp-ui
+        dap-mode
+        clang-format+
+        cmake-mode
+        markdown-mode
+        yaml-mode
+        toml-mode
+        json-mode
+        osc
+        csound-mode
+        sonic-pi
+        tidal
+        systemd))
 
 ;; ensure all packages listed above are installed
 (package-install-selected-packages)
@@ -233,6 +236,16 @@
   (marginalia-align 'right)
   :config
   (marginalia-mode))
+
+(use-package embark
+  :demand t
+  :bind (("M-e" . embark-act)))
+
+(use-package consult
+  :demand t
+  :bind (("M-s p" . (lambda () (interactive) (consult-ripgrep)))
+         ("M-s d" . (lambda () (interactive) (consult-ripgrep default-directory)))
+         ("M-s f" . (lambda () (interactive) (consult-line)))))
 
 (use-package which-key
   :demand t
