@@ -105,7 +105,7 @@
         orderless
         marginalia
         consult
-        embark embark-consult
+        embark-consult
         wgrep
         which-key
         rainbow-delimiters
