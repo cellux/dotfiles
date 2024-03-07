@@ -100,6 +100,7 @@
 (setq package-selected-packages
       '(benchmark-init
         zenburn-theme
+        doom-modeline
         vertico
         orderless
         marginalia
@@ -174,6 +175,10 @@
      `(vertico-current ((t (:inherit highlight :extend t))))
      `(completions-annotations ((t (:foreground ,zenburn-fg-05))))))
   (enable-theme 'zenburn))
+
+(use-package doom-modeline
+  :demand t
+  :config (doom-modeline-mode 1))
 
 (use-package frame
   :demand t
