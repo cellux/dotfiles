@@ -525,7 +525,9 @@
          clojure-mode
          scheme-mode
          extempore-mode
-         janet-mode))
+         janet-mode
+         langsam-mode)
+  :init (setq lispy-colon-p nil))
 
 (use-package llvm-mode
   ;; did not find this package on MELPA
