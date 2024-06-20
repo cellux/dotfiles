@@ -519,7 +519,7 @@
   :defer t
   :after sly)
 
-(use-package lispy-mode
+(use-package lispy
   :defer t
   :hook (emacs-lisp-mode
          lisp-mode
@@ -528,7 +528,10 @@
          extempore-mode
          janet-mode
          langsam-mode)
-  :init (setq lispy-colon-p nil))
+  :config
+  (setq lispy-colon-p nil)
+  (let ((item (assq 'clojure-mode lispy-goto-symbol-alist)))
+    (setcdr item '(cider-find-dwim))))
 
 (use-package llvm-mode
   ;; did not find this package on MELPA
