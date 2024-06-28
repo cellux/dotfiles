@@ -1,3 +1,6 @@
+;; disable native compilation
+(setq native-comp-speed -1)
+
 ;; do not show startup screen
 (setq inhibit-startup-screen t)
 
