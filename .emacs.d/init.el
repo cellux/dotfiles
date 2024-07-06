@@ -1,5 +1,5 @@
-;; disable native compilation
-(setq native-comp-speed -1)
+;; disable native compilation warnings
+(setq native-comp-async-report-warnings-errors 'silent)
 
 ;; do not show startup screen
 (setq inhibit-startup-screen t)
