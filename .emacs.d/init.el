@@ -140,7 +140,7 @@
         lua-mode
         php-mode
         web-mode
-        js2-mode npm-mode
+        npm-mode
         typescript-mode tide
         forth-mode
         rust-mode cargo flycheck-rust
@@ -559,12 +559,11 @@
   (web-mode-css-indent-offset 2)
   (web-mode-sql-indent-offset 2))
 
-(use-package js2-mode
+(use-package js-mode
   :defer t
   :mode "\\.js\\'"
   :custom
-  (js-indent-level 2)
-  (js2-bounce-indent-p nil))
+  (js-indent-level 2))
 
 (use-package json-mode
   :defer t
