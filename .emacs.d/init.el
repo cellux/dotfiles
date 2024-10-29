@@ -347,7 +347,8 @@
   :commands lsp
   :custom
   (lsp-enable-snippet nil)
-  (lsp-enable-file-watchers nil))
+  (lsp-enable-file-watchers nil)
+  (lsp-enable-suggest-server-download nil))
 
 (use-package lsp-ui
   :defer t
