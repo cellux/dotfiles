@@ -426,6 +426,7 @@
   (setq geiser-active-implementations '(chicken guile)))
 
 (use-package java-mode
+  :defer t
   :hook (java-mode . lsp))
 
 (use-package clojure-mode
