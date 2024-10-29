@@ -124,10 +124,12 @@
         rg
         hydra
         vterm
+        lsp-mode lsp-ui
         sly sly-asdf sly-quicklisp
         flycheck
         flycheck-clang-analyzer
         flycheck-clang-tidy
+        java-mode lsp-java
         clojure-mode cider flycheck-clojure clj-refactor
         janet-mode
         geiser geiser-chicken geiser-guile
@@ -144,7 +146,6 @@
         typescript-mode tide
         forth-mode
         rust-mode cargo flycheck-rust
-        lsp-mode lsp-ui
         dap-mode
         clang-format+
         cmake-mode
@@ -422,6 +423,9 @@
   :init
   (setq geiser-chicken-binary "chicken-csi")
   (setq geiser-active-implementations '(chicken guile)))
+
+(use-package java-mode
+  :hook (java-mode . lsp))
 
 (use-package clojure-mode
   :defer t
