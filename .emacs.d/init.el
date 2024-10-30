@@ -623,8 +623,8 @@
   (progn
     (defhydra hydra-rb ()
       "rb tools"
-      ("P" (dired "~/projects") "projects")
-      ("S" (dired "~/src") "src")
+      ("P" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
+      ("S" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
       ("i" iqa-find-user-init-file "init.el")
       ("p" (package-list-packages) "packages")
       ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
