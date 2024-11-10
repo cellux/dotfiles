@@ -114,6 +114,7 @@
         wgrep
         which-key
         rainbow-delimiters
+        dmacro
         editorconfig
         highlight
         helpful
@@ -269,6 +270,11 @@
 (use-package rainbow-delimiters
   :defer t
   :hook (prog-mode . rainbow-delimiters-mode))
+
+(use-package dmacro
+  :demand t
+  :custom `((dmacro-key . ,(kbd "C-S-e")))
+  :config (global-dmacro-mode))
 
 (use-package editorconfig
   :defer t
