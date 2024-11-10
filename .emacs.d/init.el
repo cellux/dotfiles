@@ -102,77 +102,16 @@
 (add-to-list 'package-archives
   (cons "elpa" "https://elpa.gnu.org/packages/") t)
 
-(setq package-selected-packages
-      '(benchmark-init
-        zenburn-theme
-        doom-modeline
-        vertico
-        orderless
-        marginalia
-        consult
-        embark-consult
-        wgrep
-        which-key
-        rainbow-delimiters
-        dmacro
-        editorconfig
-        highlight
-        helpful
-        realgud
-        lispy
-        magit
-        org-super-agenda
-        iqa
-        projectile
-        rg
-        hydra
-        vterm
-        lsp-mode lsp-ui
-        sly sly-asdf sly-quicklisp
-        flycheck
-        flycheck-clang-analyzer
-        flycheck-clang-tidy
-        java-mode lsp-java
-        clojure-mode cider flycheck-clojure clj-refactor
-        janet-mode
-        geiser geiser-chicken geiser-guile
-        extempore-mode
-        groovy-mode
-        go-mode
-        zig-mode
-        nim-mode
-        python-mode blacken
-        lua-mode
-        php-mode
-        web-mode
-        npm-mode
-        typescript-mode tide
-        forth-mode
-        rust-mode cargo flycheck-rust
-        dap-mode
-        clang-format+
-        cmake-mode
-        markdown-mode
-        yaml-mode
-        toml-mode
-        json-mode
-        osc
-        csound-mode
-        sonic-pi
-        tidal
-        systemd))
-
-;; ensure all packages listed above are installed
-(package-install-selected-packages)
-
 (require 'use-package)
 
 (use-package benchmark-init
+  :ensure t
   :config
   ;; To disable collection of benchmark data after init is done.
   (add-hook 'after-init-hook 'benchmark-init/deactivate))
 
 (use-package zenburn-theme
+  :ensure t
   :demand t
   :config
   (load-theme 'zenburn t)
@@ -184,6 +123,7 @@
   (enable-theme 'zenburn))
 
 (use-package doom-modeline
+  :ensure t
   :demand t
   :config (doom-modeline-mode 1))
 
@@ -231,73 +171,52 @@
   :config
   (windmove-default-keybindings))
 
-(use-package vertico
-  :demand t
-  :custom
-  (vertico-indexed-mode t)
-  :config
-  (vertico-mode))
-
-(use-package orderless
-  :demand t
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
-
-(use-package marginalia
-  :demand t
-  :custom
-  (marginalia-align 'right)
-  :config
-  (marginalia-mode))
-
-(use-package embark
-  :demand t
-  :bind (("M-e" . embark-act)))
-
-(use-package consult
-  :demand t
-  :bind (("M-s p" . (lambda () (interactive) (consult-ripgrep)))
-         ("M-s d" . (lambda () (interactive) (consult-ripgrep default-directory)))
-         ("M-s f" . (lambda () (interactive) (consult-line)))))
-
-(use-package which-key
-  :demand t
-  :bind (("C-h K" . which-key-show-top-level))
-  :config
-  (which-key-mode))
-
-(use-package rainbow-delimiters
-  :defer t
-  :hook (prog-mode . rainbow-delimiters-mode))
-
-(use-package dmacro
-  :demand t
-  :custom `((dmacro-key . ,(kbd "C-S-e")))
-  :config (global-dmacro-mode))
-
-(use-package editorconfig
-  :defer t
-  :config
-  (editorconfig-mode 1))
-
 ;; lookup auth info in Freedesktop Secret Service
 (use-package auth-source
   :defer t
   :custom
   (auth-sources '((:source (:secrets default)))))
 
+(use-package compile
+  :demand t
+  :bind (("<f9>" . compile)))
+
+(use-package highlight
+  :ensure t
+  :defer t)
+
 (use-package helpful
+  :ensure t
   :defer t
   :bind (("C-h f" . helpful-function)
          ("C-h v" . helpful-variable)
          ("C-h C-h" . helpful-at-point)))
 
-;; helper for quickly opening this file
-(use-package iqa
+(use-package which-key
+  :ensure t
+  :demand t
+  :bind (("C-h K" . which-key-show-top-level))
+  :config
+  (which-key-mode))
+
+(use-package dmacro
+  :ensure t
+  :demand t
+  :custom `((dmacro-key . ,(kbd "C-S-e")))
+  :config (global-dmacro-mode))
+
+(use-package rg
+  :ensure t
+  :demand t
+  :config
+  (rg-enable-default-bindings))
+
+(use-package wgrep
+  :ensure t
   :defer t)
 
 (use-package projectile
+  :ensure t
   :defer t
   :bind-keymap ("C-c p" . projectile-command-map)
   :custom
@@ -306,14 +225,65 @@
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
 
-(use-package rg
-  :demand t
-  :config
-  (rg-enable-default-bindings))
-
 (use-package magit
+  :ensure t
   :defer t
   :bind (("C-x g" . magit-status)))
+
+(use-package vertico
+  :ensure t
+  :demand t
+  :custom
+  (vertico-indexed-mode t)
+  :config
+  (vertico-mode))
+
+(use-package orderless
+  :ensure t
+  :demand t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package marginalia
+  :ensure t
+  :demand t
+  :custom
+  (marginalia-align 'right)
+  :config
+  (marginalia-mode))
+
+(use-package embark
+  :ensure t
+  :demand t
+  :bind (("M-e" . embark-act)))
+
+(use-package consult
+  :ensure t
+  :demand t
+  :bind (("M-s p" . (lambda () (interactive) (consult-ripgrep)))
+         ("M-s d" . (lambda () (interactive) (consult-ripgrep default-directory)))
+         ("M-s f" . (lambda () (interactive) (consult-line)))))
+
+(use-package embark-consult
+  :ensure t
+  :demand t)
+
+(use-package rainbow-delimiters
+  :ensure t
+  :defer t
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+(use-package editorconfig
+  :ensure t
+  :defer t
+  :config
+  (editorconfig-mode 1))
+
+;; helper for quickly opening this file
+(use-package iqa
+  :ensure t
+  :defer t)
 
 (use-package gdb-mi
   :defer t
@@ -322,17 +292,41 @@
   (gdb-show-main t))
 
 (use-package realgud
+  :ensure t
   :defer t)
 
+(use-package dap-mode
+  :ensure t
+  :defer t
+  :custom
+  (dap-auto-configure-features '(sessions locals controls tooltip)))
+
+(use-package lsp-mode
+  :ensure t
+  :defer t
+  :commands lsp
+  :custom
+  (lsp-enable-snippet nil)
+  (lsp-enable-file-watchers nil)
+  (lsp-enable-suggest-server-download nil))
+
+(use-package lsp-ui
+  :ensure t
+  :defer t
+  :commands lsp-ui-mode)
+
 (use-package flycheck
+  :ensure t
   :defer t
   :hook (prog-mode . flycheck-mode)
   :custom
   (flycheck-disabled-checkers '(python-pycompile)))
 
-(use-package compile
-  :demand t
-  :bind (("<f9>" . compile)))
+(use-package vterm
+  :ensure t
+  :defer t)
+
+;; org
 
 (use-package org
   :defer t
@@ -343,42 +337,66 @@
   :custom
   (org-replace-disputed-keys t)
   (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
-                            ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
-                            ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
+                           ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
+                           ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
   (org-agenda-files '("~/org"))
   (org-refile-targets '((org-agenda-files . (:level . 1)))))
 
+(use-package org-super-agenda
+  :ensure t
+  :defer t)
+
+;; file formats
+
+(use-package cmake-mode
+  :ensure t
+  :defer t
+  :mode ("\\`CMakeLists\\.txt\\'"))
+
+(use-package css-mode
+  :defer t
+  :mode "\\.css\\'"
+  :custom (css-indent-offset 2))
+
+(use-package json-mode
+  :ensure t
+  :defer t
+  :mode "\\.json\\'")
+
+(use-package markdown-mode
+  :ensure t
+  :defer t)
+
+(use-package npm-mode
+  :ensure t
+  :defer t)
+
+(use-package systemd
+  :ensure t
+  :defer t)
+
+(use-package toml-mode
+  :ensure t
+  :defer t
+  :mode "\\.toml\\'")
+
+(use-package web-mode
+  :ensure t
+  :defer t
+  :mode ("\\.[jt]sx\\'"
+         "\\.html\\'")
+  :custom
+  (web-mode-markup-indent-offset 2)
+  (web-mode-code-indent-offset 2)
+  (web-mode-css-indent-offset 2)
+  (web-mode-sql-indent-offset 2))
+
+(use-package yaml-mode
+  :ensure t
+  :defer t
+  :mode "\\.ya?ml\\'")
+
 ;; programming modes
-
-(use-package lsp-mode
-  :defer t
-  :commands lsp
-  :custom
-  (lsp-enable-snippet nil)
-  (lsp-enable-file-watchers nil)
-  (lsp-enable-suggest-server-download nil))
-
-(use-package lsp-ui
-  :defer t
-  :commands lsp-ui-mode)
-
-(use-package dap-mode
-  :defer t
-  :custom
-  (dap-auto-configure-features '(sessions locals controls tooltip)))
-
-(use-package csound-mode
-  :defer t
-  :mode "\\.csd\\'"
-  :custom
-  (csound-repl-sr 48000)
-  (csound-repl-ksmps 32)
-  (csound-repl-nchnls 2)
-  (csound-repl-0dbfs 1))
-
-(use-package tidal-mode
-  :defer t
-  :mode "\\.tidal\\'")
 
 (use-package c-mode
   :defer t
@@ -391,32 +409,186 @@
   :hook (c++-mode . lsp))
 
 (use-package clang-format+
+  :ensure t
   :defer t
   :hook (c-mode-common . clang-format+-mode)
   :custom
   (clang-format+-always-enable t)
   (clang-format-style "LLVM"))
 
-(use-package cmake-mode
+(use-package flycheck-clang-analyzer
+  :ensure t
+  :defer t)
+
+(use-package flycheck-clang-tidy
+  :ensure t
+  :defer t)
+
+(use-package forth-mode
+  :ensure t
   :defer t
-  :mode ("\\`CMakeLists\\.txt\\'"))
+  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
+
+(use-package go-mode
+  :ensure t
+  :defer t
+  :mode "\\.go\\'"
+  :init (let ((go-bin-path (expand-file-name "~/go/bin")))
+          (unless (member go-bin-path exec-path)
+            (setq exec-path (append exec-path (list go-bin-path)))))
+  :hook ((go-mode . lsp)
+         (before-save . gofmt-before-save)))
+
+(use-package groovy-mode
+  :ensure t
+  :defer t)
+
+(use-package java-mode
+  :defer t
+  :hook (java-mode . lsp))
+
+(use-package lsp-java
+  :ensure t
+  :defer t)
+
+(use-package js-mode
+  :defer t
+  :mode "\\.js\\'"
+  :custom
+  (js-indent-level 2))
+
+(use-package lua-mode
+  :ensure t
+  :defer t
+  :mode "\\.lua\\'"
+  :interpreter "lua")
 
 (use-package nim-mode
+  :ensure t
   :defer t
   :mode ("\\.nim\\'"
          "\\.nims\\'"
          "\\.nimble\\'"
          "\\`nim.cfg\\'"))
 
-(use-package forth-mode
+(use-package php-mode
+  :ensure t
   :defer t
-  :mode ("\\.f\\'" "\\.fth\\'" "\\.fs\\'" "\\.b\\'"))
+  :mode "\\.php[345]?\\'")
+
+(use-package python-mode
+  :defer t
+  :mode "\\.py\\'"
+  :interpreter "python"
+  :custom (python-indent-offset 4))
+
+(use-package blacken
+  :ensure t
+  :defer t
+  :hook (python-mode . blacken-mode))
+
+(use-package rust-mode
+  :ensure t
+  :defer t
+  :mode "\\.rs\\'"
+  :hook (rust-mode . lsp))
+
+(use-package cargo
+  :ensure t
+  :defer t
+  :hook (rust-mode . cargo-minor-mode))
+
+(use-package flycheck-rust
+  :ensure t
+  :defer t
+  :hook (flycheck-mode . flycheck-rust-setup))
+
+(use-package zig-mode
+  :ensure t
+  :defer t
+  :mode "\\.zig\\'"
+  :hook (zig-mode . lsp))
+
+(use-package typescript-mode
+  :ensure t
+  :defer t)
+
+(use-package tide
+  :ensure t
+  :defer t
+  :after (typescript-mode flycheck)
+  :hook ((typescript-mode . tide-setup)
+         (typescript-mode . tide-hl-identifier-mode)
+         (before-save . tide-format-before-save)))
+
+(add-hook 'web-mode-hook
+          (lambda ()
+            (when (string-equal "tsx" (file-name-extension buffer-file-name))
+              (tide-setup))))
+
+;; lisp worlds
+
+(use-package lispy
+  :ensure t
+  :defer t
+  :hook (emacs-lisp-mode
+         lisp-mode
+         clojure-mode
+         scheme-mode
+         extempore-mode
+         janet-mode
+         langsam-mode)
+  :config
+  (setq lispy-colon-p nil)
+  (let ((item (assq 'clojure-mode lispy-goto-symbol-alist)))
+    (setcdr item '(cider-find-dwim))))
+
+(use-package sly
+  :ensure t
+  :defer t
+  :custom
+  (inferior-lisp-program
+   (seq-find (lambda (binary-name)
+               (locate-file binary-name exec-path nil 'executable))
+             '("sbcl-rb" "sbcl"))))
+
+(use-package sly-asdf
+  :ensure t
+  :defer t
+  :after sly)
+
+(use-package sly-quicklisp
+  :ensure t
+  :defer t
+  :after sly)
+
+(use-package clojure-mode
+  :ensure t
+  :defer t
+  :mode ("\.clj\\'" . clojure-mode))
+
+(use-package cider
+  :ensure t
+  :defer t
+  :config
+  (setq cider-repl-display-help-banner nil)
+  (setq nrepl-sync-request-timeout 600))
+
+(use-package clj-refactor
+  :ensure t
+  :defer t)
+
+(use-package flycheck-clojure
+  :ensure t
+  :defer t)
 
 (use-package janet-mode
+  :ensure t
   :defer t
   :mode ("\\.janet\\'"))
 
 (use-package extempore-mode
+  :ensure t
   :defer t
   :mode "\\.xtm\\'"
   :init
@@ -427,68 +599,36 @@
   :mode ("\\.scm\\'" . scheme-mode))
 
 (use-package geiser
+  :ensure t
   :defer t
   :hook (scheme-mode . geiser-mode)
   :init
   (setq geiser-chicken-binary "chicken-csi")
   (setq geiser-active-implementations '(chicken guile)))
 
-(use-package java-mode
-  :defer t
-  :hook (java-mode . lsp))
-
-(use-package clojure-mode
-  :defer t
-  :mode ("\.clj\\'" . clojure-mode))
-
-(use-package cider
-  :defer t
-  :config
-  (setq cider-repl-display-help-banner nil)
-  (setq nrepl-sync-request-timeout 600))
-
-(use-package lua-mode
-  :defer t
-  :mode "\\.lua\\'"
-  :interpreter "lua")
-
-(use-package toml-mode
-  :defer t
-  :mode "\\.toml\\'")
-
-(use-package yaml-mode
-  :defer t
-  :mode "\\.ya?ml\\'")
-
-(use-package rust-mode
-  :defer t
-  :mode "\\.rs\\'"
-  :hook (rust-mode . lsp))
-
-(use-package cargo
-  :defer t
-  :hook (rust-mode . cargo-minor-mode))
-
-(use-package flycheck-rust
-  :defer t
-  :hook (flycheck-mode . flycheck-rust-setup))
-
-(use-package go-mode
-  :defer t
-  :mode "\\.go\\'"
-  :init (let ((go-bin-path (expand-file-name "~/go/bin")))
-          (unless (member go-bin-path exec-path)
-            (setq exec-path (append exec-path (list go-bin-path)))))
-  :hook ((go-mode . lsp)
-         (before-save . gofmt-before-save)))
-
-(use-package dap-dlv-go
+(use-package geiser-chicken
+  :ensure t
   :defer t)
 
-(use-package zig-mode
+(use-package geiser-guile
+  :ensure t
+  :defer t)
+
+;; music & sound
+
+(use-package csound-mode
+  :ensure t
   :defer t
-  :mode "\\.zig\\'"
-  :hook (zig-mode . lsp))
+  :mode "\\.csd\\'"
+  :custom
+  (csound-repl-sr 48000)
+  (csound-repl-ksmps 32)
+  (csound-repl-nchnls 2)
+  (csound-repl-0dbfs 1))
+
+(use-package osc
+  :ensure t
+  :defer t)
 
 (use-package sclang
   :if (file-accessible-directory-p "/usr/share/emacs/site-lisp/SuperCollider")
@@ -505,101 +645,19 @@
           ("M-." . sclang:find-definition-at-point)
           ("M-," . sclang-pop-definition-mark)))
 
-(use-package php-mode
-  :defer t
-  :mode "\\.php[345]?\\'")
-
-(use-package python-mode
-  :defer t
-  :mode "\\.py\\'"
-  :interpreter "python"
-  :custom (python-indent-offset 4))
-
-(use-package blacken
-  :defer t
-  :hook (python-mode . blacken-mode))
-
-(use-package lisp-mode
-  :defer t)
-
-(use-package sly
-  :defer t
-  :custom
-  (inferior-lisp-program
-   (seq-find (lambda (binary-name)
-               (locate-file binary-name exec-path nil 'executable))
-             '("sbcl-rb" "sbcl"))))
-
-(use-package sly-asdf
-  :defer t
-  :after sly)
-
-(use-package sly-quicklisp
-  :defer t
-  :after sly)
-
-(use-package lispy
-  :defer t
-  :hook (emacs-lisp-mode
-         lisp-mode
-         clojure-mode
-         scheme-mode
-         extempore-mode
-         janet-mode
-         langsam-mode)
-  :config
-  (setq lispy-colon-p nil)
-  (let ((item (assq 'clojure-mode lispy-goto-symbol-alist)))
-    (setcdr item '(cider-find-dwim))))
-
-(use-package llvm-mode
-  ;; did not find this package on MELPA
-  :disabled t
-  :defer t
-  :mode ("\\.ir\\'" "\\.ll\\'"))
-
-(use-package css-mode
-  :defer t
-  :mode "\\.css\\'"
-  :custom (css-indent-offset 2))
-
-(use-package web-mode
-  :defer t
-  :mode ("\\.[jt]sx\\'"
-         "\\.html\\'")
-  :custom
-  (web-mode-markup-indent-offset 2)
-  (web-mode-code-indent-offset 2)
-  (web-mode-css-indent-offset 2)
-  (web-mode-sql-indent-offset 2))
-
-(use-package js-mode
-  :defer t
-  :mode "\\.js\\'"
-  :custom
-  (js-indent-level 2))
-
-(use-package json-mode
-  :defer t
-  :mode "\\.json\\'")
-
-(use-package tide
-  :defer t
-  :after (typescript-mode flycheck)
-  :hook ((typescript-mode . tide-setup)
-         (typescript-mode . tide-hl-identifier-mode)
-         (before-save . tide-format-before-save)))
-
-(add-hook 'web-mode-hook
-          (lambda ()
-            (when (string-equal "tsx" (file-name-extension buffer-file-name))
-              (tide-setup))))
-
 (use-package sonic-pi
+  :ensure t
   :if (file-accessible-directory-p "/usr/lib/sonic-pi")
   :defer t
   :init
   (setq sonic-pi-path "/usr/lib/sonic-pi/"))
+
+(use-package tidal
+  :ensure t
+  :defer t
+  :mode "\\.tidal\\'")
+
+;; private
 
 (use-package rasid-mode
   :if (file-accessible-directory-p "/home/rb/zz/src/github.com/cellux/rasid")
@@ -623,7 +681,10 @@
   :mode "\\.l\\'"
   :load-path "/home/rb/projects/langsam")
 
+;; hydra
+
 (use-package hydra
+  :ensure t
   :demand t
   :config
   (progn
