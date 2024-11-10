@@ -181,6 +181,26 @@
   :demand t
   :bind (("<f9>" . compile)))
 
+;; lists
+(use-package dash
+  :ensure t
+  :demand t)
+
+;; files
+(use-package f
+  :ensure t
+  :demand t)
+
+;; hash tables
+(use-package ht
+  :ensure t
+  :demand t)
+
+;; strings
+(use-package s
+  :ensure t
+  :demand t)
+
 (use-package highlight
   :ensure t
   :defer t)
@@ -330,21 +350,41 @@
 
 (use-package org
   :defer t
-  :config
-  (global-set-key (kbd "C-c l") #'org-store-link)
-  (global-set-key (kbd "C-c a") #'org-agenda)
-  (global-set-key (kbd "C-c c") #'org-capture)
+  :bind (("C-c l" . org-store-link)
+         ("C-c a" . org-agenda)
+         ("C-c c" . org-capture)
+         :map org-mode-map
+         ("M-." . org-open-at-point)
+         ("M-," . org-mark-ring-goto))
   :custom
   (org-replace-disputed-keys t)
   (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
                            ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
                            ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
   (org-agenda-files '("~/org"))
-  (org-refile-targets '((org-agenda-files . (:level . 1)))))
+  (org-refile-targets '((org-agenda-files . (:level . 1))))
+  (org-return-follows-link t))
 
 (use-package org-super-agenda
   :ensure t
   :defer t)
+
+(setq rb--org-roam-directory (expand-file-name "~/org-roam"))
+
+(use-package org-roam
+  :ensure t
+  :defer t
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n n" . org-roam-capture)
+         ("C-c n b" . org-roam-buffer-toggle))
+  :custom
+  (org-roam-directory rb--org-roam-directory)
+  :init
+  (unless (f-dir-p rb--org-roam-directory)
+    (f-mkdir rb--org-roam-directory))
+  :config
+  (org-roam-db-autosync-mode))
 
 ;; file formats
 
@@ -688,7 +728,7 @@
   :demand t
   :config
   (progn
-    (defhydra hydra-rb ()
+    (defhydra rb--hydra ()
       "rb tools"
       ("P" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
       ("S" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
@@ -696,4 +736,4 @@
       ("p" (package-list-packages) "packages")
       ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
       ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
-    (global-set-key (kbd "<f12>") 'hydra-rb/body)))
+    (global-set-key (kbd "<f12>") 'rb--hydra/body)))
