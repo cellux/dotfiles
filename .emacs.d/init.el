@@ -543,6 +543,11 @@
   :defer t
   :hook (flycheck-mode . flycheck-rust-setup))
 
+(use-package sh-script
+  :defer t
+  :custom
+  (sh-basic-offset 2))
+
 (use-package zig-mode
   :ensure t
   :defer t
