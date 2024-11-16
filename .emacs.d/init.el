@@ -338,9 +338,7 @@
 (use-package flycheck
   :ensure t
   :defer t
-  :hook (prog-mode . flycheck-mode)
-  :custom
-  (flycheck-disabled-checkers '(python-pycompile)))
+  :hook (prog-mode . flycheck-mode))
 
 (use-package vterm
   :ensure t
@@ -458,11 +456,13 @@
 
 (use-package flycheck-clang-analyzer
   :ensure t
-  :defer t)
+  :defer t
+  :hook ((c-mode c++-mode) . flycheck-clang-analyzer-setup))
 
 (use-package flycheck-clang-tidy
   :ensure t
-  :defer t)
+  :defer t
+  :hook ((c-mode c++-mode) . flycheck-clang-tidy-setup))
 
 (use-package forth-mode
   :ensure t
@@ -522,6 +522,11 @@
   :interpreter "python"
   :custom (python-indent-offset 4))
 
+(use-package flycheck-pyflakes
+  :ensure t
+  :defer t
+  :hook (python-mode . (lambda () (require 'flycheck-pyflakes))))
+
 (use-package blacken
   :ensure t
   :defer t
@@ -541,7 +546,7 @@
 (use-package flycheck-rust
   :ensure t
   :defer t
-  :hook (flycheck-mode . flycheck-rust-setup))
+  :hook (rust-mode . flycheck-rust-setup))
 
 (use-package sh-script
   :defer t
@@ -625,7 +630,8 @@
 
 (use-package flycheck-clojure
   :ensure t
-  :defer t)
+  :defer t
+  :hook (clojure-mode . flycheck-clojure-setup))
 
 (use-package janet-mode
   :ensure t
