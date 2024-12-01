@@ -755,6 +755,7 @@
       ("P" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
       ("S" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
       ("i" iqa-find-user-init-file "init.el")
+      ("o" (dired "~/org") "org")
       ("p" (package-list-packages) "packages")
       ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
       ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
