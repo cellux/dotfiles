@@ -245,6 +245,17 @@
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
 
+(use-package perspective
+  :ensure t
+  :demand t
+  :bind (("C-x b" . persp-switch-to-buffer*)
+         ("C-x k" . persp-kill-buffer*))
+  :custom
+  (persp-mode-prefix-key (kbd "s-p"))
+  (persp-modestring-short t)
+  :init
+  (persp-mode))
+
 (use-package magit
   :ensure t
   :defer t
