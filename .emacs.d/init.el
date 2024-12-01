@@ -127,14 +127,16 @@
   :demand t
   :config (doom-modeline-mode 1))
 
-(use-package frame
+(use-package faces
   :demand t
   :config
-  ;; set font
-  (set-frame-font
-   (font-spec :name "Droid Sans Mono" :size 15)
-   nil t 'inhibit-customize)
-  ;; don't blink the cursor
+  (set-face-attribute 'default nil
+                      :family "Droid Sans Mono"
+                      :height 110))
+
+(use-package frame
+  :demand t
+  :custom
   (blink-cursor-mode 0))
 
 (use-package simple
