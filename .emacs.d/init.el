@@ -237,24 +237,30 @@
 
 (use-package projectile
   :ensure t
-  :defer t
+  :demand t
   :bind-keymap ("C-c p" . projectile-command-map)
   :custom
   (projectile-switch-project-action #'projectile-dired)
   :config
   (projectile-mode 1)
-  (add-to-list 'projectile-globally-ignored-directories "node_modules"))
+  (add-to-list 'projectile-globally-ignored-directories "^node_modules$"))
 
 (use-package perspective
   :ensure t
   :demand t
   :bind (("C-x b" . persp-switch-to-buffer*)
-         ("C-x k" . persp-kill-buffer*))
+         ("C-x k" . persp-kill-buffer*)
+         (:map perspective-map ("M-p" . persp-prev)))
   :custom
   (persp-mode-prefix-key (kbd "M-p"))
   (persp-modestring-short t)
-  :init
-  (persp-mode))
+  :config
+  (persp-mode)
+  (advice-add
+   'projectile-switch-project-by-name
+   :before
+   (lambda (project &rest _)
+     (persp-switch project))))
 
 (use-package magit
   :ensure t
