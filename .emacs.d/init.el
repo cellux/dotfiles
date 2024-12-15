@@ -306,6 +306,12 @@
   :ensure t
   :demand t)
 
+(use-package corfu
+  :ensure t
+  :demand t
+  :init
+  (global-corfu-mode))
+
 (use-package rainbow-delimiters
   :ensure t
   :defer t
