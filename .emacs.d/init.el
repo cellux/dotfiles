@@ -250,9 +250,9 @@
   :demand t
   :bind (("C-x b" . persp-switch-to-buffer*)
          ("C-x k" . persp-kill-buffer*)
-         (:map perspective-map ("M-p" . persp-prev)))
+         (:map perspective-map ("M-[" . persp-prev)))
   :custom
-  (persp-mode-prefix-key (kbd "M-p"))
+  (persp-mode-prefix-key (kbd "M-["))
   (persp-modestring-short t)
   :config
   (persp-mode)
