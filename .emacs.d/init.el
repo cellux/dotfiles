@@ -761,14 +761,19 @@
   :ensure t
   :demand t
   :config
-  (progn
-    (defhydra rb--hydra ()
-      "rb tools"
-      ("P" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
-      ("S" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
-      ("i" iqa-find-user-init-file "init.el")
-      ("o" (dired "~/org") "org")
-      ("p" (package-list-packages) "packages")
-      ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
-      ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
-    (global-set-key (kbd "<f12>") 'rb--hydra/body)))
+  (defhydra rb--hydra-dired (:exit t)
+    "rb directories"
+    ("p" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
+    ("s" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
+    ("o" (dired "~/org") "org")
+    ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
+    ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
+  (defhydra rb--hydra-emacs (:exit t)
+    "rb emacs places"
+    ("i" iqa-find-user-init-file "init.el")
+    ("p" package-list-packages "packages"))
+  (defhydra rb--hydra-top (:exit t)
+    "rb hydras"
+    ("d" rb--hydra-dired/body "dired")
+    ("e" rb--hydra-emacs/body "emacs"))
+  :bind ("<f12>" . rb--hydra-top/body))
