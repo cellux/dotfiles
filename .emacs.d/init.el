@@ -10,9 +10,6 @@
 (setq custom-file
   (expand-file-name "settings.el" user-emacs-directory))
 
-;; I decided to configure everything here via use-package
-;(load-file custom-file)
-
 ;; add $HOME/bin to exec-path
 (add-to-list 'exec-path (expand-file-name "~/bin"))
 
@@ -200,6 +197,11 @@
 (use-package s
   :ensure t
   :demand t)
+
+;; parsing expression grammars
+(use-package peg
+  :ensure t
+  :defer t)
 
 (use-package highlight
   :ensure t
