@@ -3,6 +3,9 @@
 (setq native-comp-async-report-warnings-errors 'silent)
 (setq native-comp-jit-compilation nil)
 
+;; maximize frames
+(setq default-frame-alist '((fullscreen . maximized)))
+
 ;; do not show startup screen
 (setq inhibit-startup-screen t)
 
