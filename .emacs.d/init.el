@@ -234,6 +234,23 @@
   :ensure t
   :defer t)
 
+(use-package xref
+  :demand t
+  :custom
+  (xref-show-definitions-function #'xref-show-definitions-completing-read))
+
+(use-package dumb-jump
+  :ensure t
+  :demand t
+  :custom
+  (dumb-jump-prefer-searcher 'rg)
+  :config
+  ;; xref package sets etags--xref-backend as default at depth 90
+  ;;
+  ;; with depth 80 we ensure that dumb-jump has priority over etags
+  ;; but not over any backend added by prog modes later
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate 80))
+
 (use-package projectile
   :ensure t
   :demand t
