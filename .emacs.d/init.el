@@ -224,12 +224,6 @@
   :config
   (which-key-mode))
 
-(use-package dmacro
-  :ensure t
-  :demand t
-  :custom `((dmacro-key . ,(kbd "C-S-e")))
-  :config (global-dmacro-mode))
-
 (use-package rg
   :ensure t
   :demand t
