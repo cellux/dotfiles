@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 ;; disable native compilation
 (setq native-comp-speed -1)
 (setq native-comp-async-report-warnings-errors 'silent)
@@ -142,6 +144,25 @@
 (use-package simple
   :demand t
   :bind (("C-z" . undo)))
+
+(defun rb--eshell-other-window ()
+  (interactive)
+  (let* ((dir (if (eq major-mode 'dired-mode)
+                  (dired-current-directory)
+                default-directory))
+         (bufname (format "*eshell: %s*" dir))
+         (w (select-window (split-window-horizontally)))
+         (buf (switch-to-buffer (get-buffer-create bufname)))
+         (eshell-buffer-name bufname))
+    (eshell)
+    (keymap-local-set "C-d" (lambda ()
+                              (interactive)
+                              (kill-buffer buf)
+                              (delete-window)))))
+
+(use-package eshell
+  :demand t
+  :bind (("C-c RET" . rb--eshell-other-window)))
 
 (use-package dired
   :demand t
