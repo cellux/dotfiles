@@ -146,7 +146,9 @@
 (use-package dired
   :demand t
   :bind (:map dired-mode-map
-              ("E" . wdired-change-to-wdired-mode)))
+              ("E" . wdired-change-to-wdired-mode))
+  :custom
+  (dired-dwim-target t))
 
 ;; keep track of recently used files
 (use-package recentf
