@@ -704,6 +704,12 @@
   :ensure t
   :defer t)
 
+;; documentation
+
+(use-package rfc-mode
+  :ensure t
+  :defer t)
+
 ;; music & sound
 
 (use-package csound-mode
