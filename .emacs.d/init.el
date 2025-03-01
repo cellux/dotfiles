@@ -1,99 +1,5 @@
 ;; -*- lexical-binding: t -*-
 
-;; disable native compilation
-(setq native-comp-speed -1)
-(setq native-comp-async-report-warnings-errors 'silent)
-(setq native-comp-jit-compilation nil)
-
-;; maximize frames
-(setq default-frame-alist '((fullscreen . maximized)))
-
-;; do not show startup screen
-(setq inhibit-startup-screen t)
-
-;; set location of automatically saved customizations
-(setq custom-file
-  (expand-file-name "settings.el" user-emacs-directory))
-
-;; add $HOME/bin to exec-path
-(add-to-list 'exec-path (expand-file-name "~/bin"))
-
-;; enable all commands
-(setq disabled-command-function nil)
-
-(let ((mib (* 1024 1024)))
-  ;; allow more consing between garbage collections
-  (setq gc-cons-threshold (max gc-cons-threshold (* 128 mib)))
-  ;; maximum number of bytes to read from a subprocess in a single chunk
-  (setq read-process-output-max (max read-process-output-max (* 1 mib))))
-
-;; default to utf-8
-(set-language-environment "UTF-8")
-(prefer-coding-system 'utf-8-unix)
-
-;; show matching parentheses
-(show-paren-mode 1)
-
-;; scroll by one line when reaching top/bottom of screen
-(setq scroll-step 1)
-
-;; no menubar
-(menu-bar-mode 0)
-
-;; no toolbar
-(tool-bar-mode 0)
-
-;; disable electric indent
-(electric-indent-mode 0)
-
-;; try to indent first, auto-complete if already indented
-(setq tab-always-indent 'complete)
-
-;; indent with spaces by default
-(setq-default indent-tabs-mode nil)
-
-;; use two spaces per tab stop
-(setq-default tab-width 2)
-
-;; turn on syntax highlighting
-(global-font-lock-mode)
-
-;; automatically revert unchanged buffers
-;; when the underlying file is changed on disk
-(global-auto-revert-mode t)
-
-;; do not make backup files
-(setq make-backup-files nil)
-
-;; do not create lock files
-(setq create-lockfiles nil)
-
-;; all auto-save files shall go to /tmp
-(add-to-list
- 'auto-save-file-name-transforms
- `("\\`/\\([^/]*/\\)*\\([^/]*\\)\\'"
-   ,(concat temporary-file-directory "\\2") t)
- :at-end)
-
-;; use the mouse wheel
-(mouse-wheel-mode t)
-
-;; show both line and column numbers in the mode line
-(line-number-mode 1)
-(column-number-mode 1)
-
-;; indicate empty lines beyond the end of file
-(setq-default indicate-empty-lines t)
-
-;; show name of current buffer in frame title
-(setq frame-title-format "%f")
-
-;; searches and matches should ignore case
-(setq-default case-fold-search t)
-
-;; follows symlinks to version controlled files
-(setq vc-follow-symlinks t)
-
 ;;; packages
 
 (require 'package)
@@ -105,6 +11,104 @@
   (cons "elpa" "https://elpa.gnu.org/packages/") t)
 
 (require 'use-package)
+
+(use-package emacs
+  :custom
+
+  ;; disable native compilation
+  (native-comp-speed -1)
+  (native-comp-async-report-warnings-errors 'silent)
+  (native-comp-jit-compilation nil)
+
+  ;; maximize frames
+  (default-frame-alist '((fullscreen . maximized)))
+
+  ;; do not show startup screen
+  (inhibit-startup-screen t)
+
+  ;; set location of automatically saved customizations
+  (custom-file (expand-file-name "settings.el" user-emacs-directory))
+
+  ;; scroll by one line when reaching top/bottom of screen
+  (scroll-step 1)
+
+  ;; try to indent first, auto-complete if already indented
+  (tab-always-indent 'complete)
+
+  ;; indent with spaces by default
+  (indent-tabs-mode nil)
+
+  ;; use two spaces per tab stop
+  (tab-width 2)
+
+  ;; do not make backup files
+  (make-backup-files nil)
+
+  ;; do not create lock files
+  (create-lockfiles nil)
+
+  ;; indicate empty lines beyond the end of file
+  (indicate-empty-lines t)
+
+  ;; searches and matches should ignore case
+  (case-fold-search t)
+
+  ;; follow symlinks to version controlled files
+  (vc-follow-symlinks t)
+
+  :config
+
+  ;; add $HOME/bin to exec-path
+  (add-to-list 'exec-path (expand-file-name "~/bin"))
+
+  ;; enable all commands
+  (setq disabled-command-function nil)
+
+  (let ((mib (* 1024 1024)))
+    ;; allow more consing between garbage collections
+    (setq gc-cons-threshold (max gc-cons-threshold (* 128 mib)))
+    ;; maximum number of bytes to read from a subprocess in a single chunk
+    (setq read-process-output-max (max read-process-output-max (* 1 mib))))
+
+  ;; default to utf-8
+  (set-language-environment "UTF-8")
+  (prefer-coding-system 'utf-8-unix)
+
+  ;; show matching parentheses
+  (show-paren-mode 1)
+
+  ;; no menubar
+  (menu-bar-mode 0)
+
+  ;; no toolbar
+  (tool-bar-mode 0)
+
+  ;; disable electric indent
+  (electric-indent-mode 0)
+
+  ;; turn on syntax highlighting
+  (global-font-lock-mode)
+
+  ;; automatically revert unchanged buffers
+  ;; when the underlying file is changed on disk
+  (global-auto-revert-mode t)
+
+  ;; all auto-save files shall go to /tmp
+  (add-to-list
+   'auto-save-file-name-transforms
+   `("\\`/\\([^/]*/\\)*\\([^/]*\\)\\'"
+     ,(concat temporary-file-directory "\\2") t)
+   :at-end)
+
+  ;; use the mouse wheel
+  (mouse-wheel-mode t)
+
+  ;; show both line and column numbers in the mode line
+  (line-number-mode 1)
+  (column-number-mode 1)
+
+  ;; show name of current buffer in frame title
+  (setq frame-title-format "%f"))
 
 (use-package benchmark-init
   :ensure t
