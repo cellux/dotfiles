@@ -686,9 +686,15 @@
 (use-package cider
   :ensure t
   :defer t
+  :custom
+  (cider-repl-display-help-banner nil)
+  (nrepl-sync-request-timeout 600)
+  :hook ((clojure-mode . rb/start-sesman-session))
   :config
-  (setq cider-repl-display-help-banner nil)
-  (setq nrepl-sync-request-timeout 600))
+  (defun rb/start-sesman-session ()
+    "Ensure an active Sesman session when working in Clojure."
+    (unless (sesman-current-session 'CIDER)
+      (cider-jack-in-clj nil))))
 
 (use-package clj-refactor
   :ensure t
