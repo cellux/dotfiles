@@ -783,26 +783,26 @@
 ;; private
 
 (use-package rasid-mode
-  :if (file-accessible-directory-p "/home/rb/zz/src/github.com/cellux/rasid")
+  :if (file-accessible-directory-p (expand-file-name "~/zz/src/github.com/cellux/rasid"))
   :defer t
   :mode "\\.rasid\\'"
-  :load-path "/home/rb/zz/src/github.com/cellux/rasid"
+  :load-path (lambda () (expand-file-name "~/zz/src/github.com/cellux/rasid"))
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package floyd-mode
-  :if (file-accessible-directory-p "/home/rb/zz/src/github.com/cellux/floyd")
+  :if (file-accessible-directory-p (expand-file-name "~/zz/src/github.com/cellux/floyd"))
   :defer t
   :mode "\\.fld\\'"
-  :load-path "/home/rb/zz/src/github.com/cellux/floyd"
+  :load-path (lambda () (expand-file-name "~/zz/src/github.com/cellux/floyd"))
   :init
   (add-to-list 'exec-path (expand-file-name "~/zz/bin")))
 
 (use-package langsam-mode
-  :if (file-accessible-directory-p "/home/rb/projects/langsam")
+  :if (file-accessible-directory-p (expand-file-name "~/projects/langsam"))
   :defer t
   :mode "\\.l\\'"
-  :load-path "/home/rb/projects/langsam")
+  :load-path (lambda () (expand-file-name "~/projects/langsam")))
 
 ;; hydra
 
