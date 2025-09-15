@@ -450,6 +450,17 @@
   :config
   (org-roam-db-autosync-mode))
 
+(use-package org-jira
+  :if (file-accessible-directory-p (expand-file-name  "~/.org-jira"))
+  :init
+  (when-let* ((auth-info (car (auth-source-search :service "jira")))
+              (host (plist-get auth-info :host))
+              (user (plist-get auth-info :user))
+              (pat (auth-info-password auth-info)))
+    (setq jiralib-url (format "https://%s/" host))
+    (setq jiralib-user user)
+    (setq jiralib-token (cons "Authorization" (concat "Bearer " pat)))))
+
 ;; file formats
 
 (use-package cmake-mode
