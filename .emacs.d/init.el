@@ -570,7 +570,7 @@
 
 (use-package js-mode
   :defer t
-  :mode "\\.js\\'"
+  :mode "\\.m?js\\'"
   :custom
   (js-indent-level 2))
 
