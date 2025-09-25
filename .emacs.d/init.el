@@ -20,6 +20,9 @@
   (native-comp-async-report-warnings-errors 'silent)
   (native-comp-jit-compilation nil)
 
+  ;; don't beep
+  (ring-bell-function 'ignore)
+
   ;; maximize frames
   (default-frame-alist '((fullscreen . maximized)))
 
