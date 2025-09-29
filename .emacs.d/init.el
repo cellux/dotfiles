@@ -407,6 +407,8 @@
 (use-package flycheck
   :ensure t
   :defer t
+  :custom
+  (flycheck-temp-prefix ".flycheck")
   :hook (prog-mode . flycheck-mode))
 
 (use-package vterm
