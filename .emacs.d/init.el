@@ -209,7 +209,16 @@
 
 (use-package compile
   :demand t
-  :bind (("<f9>" . compile)))
+  :bind (("<f9>" . compile))
+  :init
+  (when (file-directory-p "/etc/debuginfod")
+    (let* ((files (file-expand-wildcards "/etc/debuginfod/*.urls"))
+           (lines (mapcan (lambda (filename)
+                            (with-temp-buffer
+                              (insert-file-contents filename)
+                              (split-string (buffer-string) "\n" t))) files))
+           (debuginfod-urls (mapconcat #'identity lines)))
+      (setenv "DEBUGINFOD_URLS" debuginfod-urls))))
 
 ;; lists
 (use-package dash
