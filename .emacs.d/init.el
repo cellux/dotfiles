@@ -681,6 +681,8 @@
          extempore-mode
          janet-mode
          langsam-mode)
+  :custom
+  (lispy-no-space t)
   :config
   (setq lispy-colon-p nil)
   (let ((item (assq 'clojure-mode lispy-goto-symbol-alist)))
