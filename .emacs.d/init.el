@@ -62,7 +62,9 @@
   :config
 
   ;; add $HOME/bin to exec-path
-  (add-to-list 'exec-path (expand-file-name "~/bin"))
+  (let ((home-bin-path (expand-file-name "~/bin")))
+    (when (file-accessible-directory-p home-bin-path)
+      (add-to-list 'exec-path home-bin-path)))
 
   ;; enable all commands
   (setq disabled-command-function nil)
@@ -565,8 +567,8 @@
   :defer t
   :mode "\\.go\\'"
   :init (let ((go-bin-path (expand-file-name "~/go/bin")))
-          (unless (member go-bin-path exec-path)
-            (setq exec-path (append exec-path (list go-bin-path)))))
+          (when (file-accessible-directory-p go-bin-path)
+            (add-to-list 'exec-path go-bin-path)))
   :hook ((go-mode . lsp)
          (before-save . gofmt-before-save)))
 
