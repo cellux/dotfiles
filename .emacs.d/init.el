@@ -355,9 +355,10 @@
 (use-package consult
   :ensure t
   :demand t
-  :bind (("M-s p" . (lambda () (interactive) (consult-ripgrep)))
+  :bind (("M-s p" . consult-ripgrep)
          ("M-s d" . (lambda () (interactive) (consult-ripgrep default-directory)))
-         ("M-s f" . (lambda () (interactive) (consult-line)))))
+         ("M-s f" . consult-line)
+         ("C-x b" . consult-buffer)))
 
 (use-package embark-consult
   :ensure t
