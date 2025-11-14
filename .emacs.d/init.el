@@ -436,7 +436,9 @@
          ("C-c c" . org-capture)
          :map org-mode-map
          ("M-." . org-open-at-point)
-         ("M-," . org-mark-ring-goto))
+         ("M-," . org-mark-ring-goto)
+         :map org-src-mode-map
+         ("C-c `" . org-edit-src-abort))
   :custom
   (org-replace-disputed-keys t)
   (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
@@ -444,7 +446,8 @@
                            ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
   (org-agenda-files '("~/org"))
   (org-refile-targets '((org-agenda-files . (:level . 1))))
-  (org-return-follows-link t))
+  (org-return-follows-link t)
+  (org-confirm-babel-evaluate nil))
 
 (use-package org-super-agenda
   :ensure t
@@ -477,6 +480,10 @@
     (setq jiralib-url (format "https://%s/" host))
     (setq jiralib-user user)
     (setq jiralib-token (cons "Authorization" (concat "Bearer " pat)))))
+
+(use-package ob-clojure
+  :custom
+  (org-babel-clojure-backend 'cider))
 
 ;; file formats
 
@@ -718,6 +725,7 @@
   :defer t
   :custom
   (cider-repl-display-help-banner nil)
+  (cider-allow-jack-in-without-project t)
   (nrepl-sync-request-timeout 600))
 
 (use-package clj-refactor
