@@ -437,17 +437,23 @@
          :map org-mode-map
          ("M-." . org-open-at-point)
          ("M-," . org-mark-ring-goto)
+         ("C-c C-x C-l" . org-toggle-link-display)
          :map org-src-mode-map
          ("C-c `" . org-edit-src-abort))
   :custom
   (org-replace-disputed-keys t)
-  (org-capture-templates '(("t" "Task" entry (file+headline "tasks.org" "Tasks") nil)
-                           ("i" "Idea" entry (file+headline "ideas.org" "Ideas") nil)
-                           ("n" "Note" entry (file+headline "notes.org" "Notes") nil)))
-  (org-agenda-files '("~/org"))
+  (org-capture-templates '(("t" "Task" entry (file "tasks.org") nil)
+                           ("T" "Tool" entry (file "tools.org") nil)
+                           ("l" "Learn" entry (file "learn.org") nil)
+                           ("i" "Idea" entry (file "ideas.org") nil)
+                           ("n" "Note" entry (file "notes.org") nil)))
+  (org-agenda-files '("~/org/agenda.org"))
   (org-refile-targets '((org-agenda-files . (:level . 1))))
+  (org-refile-use-outline-path 'file)
   (org-return-follows-link t)
-  (org-confirm-babel-evaluate nil))
+  (org-confirm-babel-evaluate nil)
+  :hook
+  ((before-save . whitespace-cleanup)))
 
 (use-package org-super-agenda
   :ensure t
