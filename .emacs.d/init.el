@@ -858,7 +858,11 @@
                                   x-ai/grok-code-fast-1
                                   z-ai/glm-4.6
                                   z-ai/glm-4.6v)))
-  (setq gptel-model 'deepseek/deepseek-v3.2))
+  (setq gptel-model 'deepseek/deepseek-v3.2)
+  (require 'gptel-org)
+  (setq gptel-org-branching-context t)
+  (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@me\n")
+  (setf (alist-get 'org-mode gptel-response-prefix-alist) "@you\n"))
 
 ;; documentation
 
