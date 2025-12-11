@@ -780,6 +780,84 @@
   :ensure t
   :defer t)
 
+;; AI
+
+(use-package gptel
+  :ensure t
+  :defer t
+  :init
+  (setq gptel-backend (gptel-make-openai "OpenRouter"
+                        :host "openrouter.ai"
+                        :endpoint "/api/v1/chat/completions"
+                        :stream t
+                        :key (lambda ()
+                               (when-let ((auth-info (auth-source-search :service "openrouter")))
+                                 (auth-info-password (car auth-info))))
+                        :models '(anthropic/claude-haiku-4.5
+                                  anthropic/claude-opus-4.5
+                                  anthropic/claude-sonnet-4.5
+                                  deepseek/deepseek-v3.2
+                                  google/gemini-2.5-pro
+                                  google/gemini-3-pro-image-preview
+                                  google/gemini-3-pro-preview
+                                  meta-llama/llama-3.1-8b-instruct
+                                  meta-llama/llama-3.2-11b-vision-instruct
+                                  meta-llama/llama-3.2-90b-vision-instruct
+                                  meta-llama/llama-3.3-70b-instruct
+                                  meta-llama/llama-4-maverick
+                                  meta-llama/llama-4-scout
+                                  mistralai/codestral-2508
+                                  mistralai/devstral-2512:free
+                                  mistralai/devstral-2512
+                                  mistralai/devstral-medium
+                                  mistralai/devstral-small
+                                  mistralai/devstral-small-2505
+                                  mistralai/ministral-14b-2512
+                                  mistralai/ministral-8b-2512
+                                  mistralai/ministral-3b-2512
+                                  mistralai/mistral-large-2512
+                                  mistralai/mistral-nemo
+                                  mistralai/mistral-small-3.2-24b-instruct
+                                  mistralai/mixtral-8x22b-instruct
+                                  mistralai/mixtral-8x7b-instruct
+                                  mistralai/pixtral-12b
+                                  mistralai/pixtral-large-2411
+                                  mistralai/voxtral-small-24b-2507
+                                  moonshotai/kimi-k2-0905
+                                  moonshotai/kimi-k2-thinking
+                                  openai/gpt-5.1
+                                  openai/gpt-5.1-chat
+                                  openai/gpt-5.1-codex
+                                  openai/gpt-5.1-codex-max
+                                  openai/gpt-5.1-codex-mini
+                                  openai/gpt-5.2
+                                  openai/gpt-5.2-chat
+                                  openai/gpt-5.2-pro
+                                  openai/gpt-oss-120b
+                                  openai/gpt-oss-20b
+                                  openai/o3
+                                  openai/o3-deep-research
+                                  openai/o3-mini
+                                  openai/o3-mini-high
+                                  openai/o3-pro
+                                  openai/o4-mini
+                                  openai/o4-mini-deep-research
+                                  openai/o4-mini-high
+                                  openrouter/auto
+                                  openrouter/bodybuilder
+                                  qwen/qwen3-235b-a22b-2507
+                                  qwen/qwen3-235b-a22b-thinking-2507
+                                  qwen/qwen3-coder
+                                  qwen/qwen3-next-80b-a3b-instruct
+                                  qwen/qwen3-next-80b-a3b-thinking
+                                  qwen/qwen3-vl-235b-a22b-instruct
+                                  qwen/qwen3-vl-235b-a22b-thinking
+                                  x-ai/grok-4.1-fast
+                                  x-ai/grok-code-fast-1
+                                  z-ai/glm-4.6
+                                  z-ai/glm-4.6v)))
+  (setq gptel-model 'deepseek/deepseek-v3.2))
+
 ;; documentation
 
 (use-package rfc-mode
