@@ -94,6 +94,11 @@
   ;; turn on syntax highlighting
   (global-font-lock-mode)
 
+  ;; use Google's Noto Color Emoji font for emojis if available
+  (let ((noto-color-emoji (font-spec :family "Noto Color Emoji")))
+    (when (find-font noto-color-emoji)
+      (set-fontset-font t 'emoji noto-color-emoji)))
+
   ;; automatically revert unchanged buffers
   ;; when the underlying file is changed on disk
   (global-auto-revert-mode t)
