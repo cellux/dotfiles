@@ -785,6 +785,8 @@
 (use-package gptel
   :ensure t
   :defer t
+  :bind (:map gptel-mode-map
+              ("C-<return>" . gptel-send))
   :init
   (setq gptel-backend (gptel-make-openai "OpenRouter"
                         :host "openrouter.ai"
