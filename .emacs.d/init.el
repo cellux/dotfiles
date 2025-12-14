@@ -458,7 +458,8 @@
   (org-return-follows-link t)
   (org-confirm-babel-evaluate nil)
   :hook
-  ((before-save . whitespace-cleanup)))
+  ((org-mode . visual-line-mode)
+   (before-save . whitespace-cleanup)))
 
 (use-package org-super-agenda
   :ensure t
