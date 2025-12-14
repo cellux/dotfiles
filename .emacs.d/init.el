@@ -786,6 +786,7 @@
 (use-package gptel
   :ensure t
   :defer t
+  :hook (org-mode . gptel-mode)
   :config
   (setq gptel-backend
         (gptel-make-openai "OpenRouter"
