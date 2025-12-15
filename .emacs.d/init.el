@@ -812,6 +812,7 @@
                     meta-llama/llama-3.3-70b-instruct
                     meta-llama/llama-4-maverick
                     meta-llama/llama-4-scout
+                    minimax/minimax-m2
                     mistralai/codestral-2508
                     mistralai/devstral-2512:free
                     mistralai/devstral-2512
