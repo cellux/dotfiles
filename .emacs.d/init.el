@@ -459,6 +459,7 @@
   (org-confirm-babel-evaluate nil)
   :hook
   ((org-mode . visual-line-mode)
+   (org-mode . (lambda () (toggle-word-wrap 1)))
    (before-save . whitespace-cleanup)))
 
 (use-package org-super-agenda
@@ -786,7 +787,9 @@
 (use-package gptel
   :ensure t
   :defer t
-  :hook (org-mode . gptel-mode)
+  :hook ((org-mode . gptel-mode)
+         (gptel-mode . visual-line-mode)
+         (gptel-mode . (lambda () (toggle-word-wrap 1))))
   :config
   (setq gptel-backend
         (gptel-make-openai "OpenRouter"
