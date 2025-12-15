@@ -964,10 +964,19 @@
     ("o" (dired "~/org") "org")
     ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
     ("Q" (dired "~/quicklisp/dists/quicklisp/software") "quicklisp/global"))
+  (defhydra rb--hydra-emacs-debug nil
+    "rb emacs debug settings"
+    ("e" toggle-debug-on-error (format "debug-on-error:%s" (if debug-on-error "ON" "OFF")))
+    ("q" toggle-debug-on-quit (format "debug-on-quit:%s" (if debug-on-quit "ON" "OFF")))
+    ("s" (lambda ()
+           (interactive)
+           (setq debug-on-signal (not debug-on-signal)))
+     (format "debug-on-signal:%s" (if debug-on-signal "ON" "OFF"))))
   (defhydra rb--hydra-emacs (:exit t)
-    "rb emacs places"
+    "rb emacs"
     ("i" iqa-find-user-init-file "init.el")
-    ("p" package-list-packages "packages"))
+    ("p" package-list-packages "packages")
+    ("d" rb--hydra-emacs-debug/body "debug"))
   (defhydra rb--hydra-top (:exit t)
     "rb hydras"
     ("d" rb--hydra-dired/body "dired")
