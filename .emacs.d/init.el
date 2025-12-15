@@ -870,6 +870,10 @@
   (setf (alist-get 'org-mode gptel-response-prefix-alist) "@ai ")
   (setq gptel-expert-commands t))
 
+(use-package gptel-agent
+  :ensure t
+  :defer t)
+
 (use-package rb-gptel
   :if (file-accessible-directory-p (expand-file-name "~/projects/rb-gptel"))
   :load-path "~/projects/rb-gptel")
