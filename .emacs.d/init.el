@@ -868,11 +868,10 @@
   (setq gptel-org-branching-context t)
   (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@rb ")
   (setf (alist-get 'org-mode gptel-response-prefix-alist) "@ai ")
-  (setq gptel-expert-commands t))
-
-(use-package gptel-agent
-  :ensure t
-  :defer t)
+  (setq gptel-expert-commands t)
+  (setq gptel-curl-file-size-threshold 4096)
+  (setq gptel-max-tokens 32768)
+  (require 'gptel-agent))
 
 (use-package rb-gptel
   :if (file-accessible-directory-p (expand-file-name "~/projects/rb-gptel"))
