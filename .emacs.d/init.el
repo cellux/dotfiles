@@ -227,6 +227,10 @@
            (debuginfod-urls (mapconcat #'identity lines)))
       (setenv "DEBUGINFOD_URLS" debuginfod-urls))))
 
+(use-package inspector
+  :ensure t
+  :defer t)
+
 ;; lists
 (use-package dash
   :ensure t
