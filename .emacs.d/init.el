@@ -867,7 +867,7 @@
                     x-ai/grok-code-fast-1
                     z-ai/glm-4.6
                     z-ai/glm-4.6v)))
-  (setq gptel-model 'qwen/qwen3-coder)
+  (setq gptel-model 'openai/gpt-5.1-codex-max)
   (require 'gptel-org)
   (setq gptel-org-branching-context t)
   (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@rb ")
@@ -875,6 +875,7 @@
   (setq gptel-expert-commands t)
   (setq gptel-curl-file-size-threshold 4096)
   (setq gptel-max-tokens 32768)
+  (setq gptel-temperature 0.1)
   (require 'gptel-agent))
 
 (use-package rb-gptel
