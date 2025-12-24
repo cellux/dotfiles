@@ -808,6 +808,7 @@
                     anthropic/claude-sonnet-4.5
                     deepseek/deepseek-v3.2
                     google/gemini-2.5-pro
+                    google/gemini-3-flash-preview
                     google/gemini-3-pro-image-preview
                     google/gemini-3-pro-preview
                     meta-llama/llama-3.1-8b-instruct
@@ -866,6 +867,7 @@
                     x-ai/grok-4.1-fast
                     x-ai/grok-code-fast-1
                     z-ai/glm-4.6
+                    z-ai/glm-4.7
                     z-ai/glm-4.6v)))
   (setq gptel-model 'openai/gpt-5.1-codex-max)
   (require 'gptel-org)
