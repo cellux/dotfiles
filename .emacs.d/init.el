@@ -957,6 +957,12 @@
   :mode "\\.l\\'"
   :load-path (lambda () (expand-file-name "~/projects/langsam")))
 
+(use-package mixtape
+  :if (file-accessible-directory-p (expand-file-name "~/projects/mixtape"))
+  :defer t
+  :mode ("\\.tape\\'" . mixtape-mode)
+  :load-path (lambda () (expand-file-name "~/projects/mixtape")))
+
 ;; hydra
 
 (use-package hydra
