@@ -790,7 +790,8 @@
 
 (use-package gptel-agent
   :ensure t
-  :defer t)
+  :defer t
+  :after gptel)
 
 (use-package gptel
   :ensure t
