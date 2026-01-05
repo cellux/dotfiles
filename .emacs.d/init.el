@@ -1,5 +1,11 @@
 ;; -*- lexical-binding: t -*-
 
+;;; profile
+
+(setq rb:profile
+      (cond ((file-exists-p (expand-file-name "~/.work")) :work)
+            (t :home)))
+
 ;;; packages
 
 (require 'package)
@@ -801,9 +807,9 @@
          (gptel-mode . (lambda () (toggle-word-wrap 1))))
   :config
   (setq gptel-backend
-        (cond ((file-exists-p (expand-file-name "~/.work"))
-               (gptel-make-gh-copilot "Copilot"))
-              (t (gptel-make-openai "OpenRouter"
+        (pcase rb:profile
+          (:work (gptel-make-gh-copilot "Copilot"))
+          (:home (gptel-make-openai "OpenRouter"
                    :host "openrouter.ai"
                    :endpoint "/api/v1/chat/completions"
                    :stream t
@@ -876,7 +882,9 @@
                              z-ai/glm-4.6
                              z-ai/glm-4.7
                              z-ai/glm-4.6v)))))
-  (setq gptel-model 'openai/gpt-5.1-codex-max)
+  (setq gptel-model (pcase rb:profile
+                      (:work 'copilot/gpt-4o)
+                      (:home 'openai/gpt-5.1-codex-max)))
   (require 'gptel-org)
   (setq gptel-org-branching-context t)
   (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@rb ")
