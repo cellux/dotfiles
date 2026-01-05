@@ -788,6 +788,10 @@
 
 ;; AI
 
+(use-package gptel-agent
+  :ensure t
+  :defer t)
+
 (use-package gptel
   :ensure t
   :defer t
