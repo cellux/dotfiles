@@ -796,12 +796,12 @@
 
 (use-package gptel-agent
   :ensure t
-  :defer t
+  :demand t
   :after gptel)
 
 (use-package gptel
   :ensure t
-  :defer t
+  :demand t
   :hook ((org-mode . gptel-mode)
          (gptel-mode . visual-line-mode)
          (gptel-mode . (lambda () (toggle-word-wrap 1))))
