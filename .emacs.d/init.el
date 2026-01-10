@@ -883,7 +883,7 @@
                              z-ai/glm-4.7
                              z-ai/glm-4.6v)))))
   (setq gptel-model (pcase rb:profile
-                      (:work 'gpt-4o)
+                      (:work 'gpt-5.2)
                       (:home 'openai/gpt-5.1-codex-mini)))
   (require 'gptel-org)
   (setq gptel-org-branching-context t)
