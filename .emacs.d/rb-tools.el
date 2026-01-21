@@ -255,6 +255,12 @@ if the parse is successful."
                      (root2 (treesit-parser-root-node parser2)))
                 (unless root2
                   (error "Tree-sitter reparsing failed"))
+                (when (treesit-search-subtree
+                       root2
+                       (lambda (node)
+                         (or (treesit-node-check node 'has-error)
+                             (treesit-node-check node 'missing))))
+                  (error "Tree-sitter reparsing failed"))
                 (write-region (point-min) (point-max) path nil 'silent)))))
       (set-buffer-modified-p nil))))
 
