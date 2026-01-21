@@ -256,6 +256,25 @@
   :ensure t
   :defer t)
 
+;; tree-sitter
+(use-package treesit
+  :demand t
+  :config
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (c "https://github.com/tree-sitter/tree-sitter-c")
+          (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (java "https://github.com/tree-sitter/tree-sitter-java")
+          (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript"))))
+
 (use-package highlight
   :ensure t
   :defer t)
@@ -809,10 +828,6 @@
   (setq gptel-max-tokens 32768)
   (setq gptel-temperature 0.1))
 
-(use-package rb-gptel
-  :if (file-accessible-directory-p (expand-file-name "~/projects/rb-gptel"))
-  :load-path "~/projects/rb-gptel")
-
 ;; documentation
 
 (use-package rfc-mode
@@ -1007,3 +1022,8 @@
   (setq gptel-model (pcase context
                       (:work 'gpt-5.2)
                       (:home 'openai/gpt-5.1-codex-mini))))
+
+;; addons
+
+(let ((init-dir (file-name-directory (file-truename (or load-file-name buffer-file-name)))))
+  (load (expand-file-name "rb-tools.el" init-dir)))
