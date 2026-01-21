@@ -857,6 +857,7 @@
                              openai/gpt-5.1-codex-mini
                              openai/gpt-5.2
                              openai/gpt-5.2-chat
+                             openai/gpt-5.2-codex
                              openai/gpt-5.2-pro
                              openai/gpt-oss-120b
                              openai/gpt-oss-20b
