@@ -222,7 +222,7 @@ Each element in the returned list contains the following fields:
      :description "List of nodes to return."))
  :confirm t)
 
-(defun rb-tools-ts-update-nodes (path nodes)
+(defun rb-tools-ts-update-nodes (path nodes &optional skip-format)
   "Parse PATH using Tree-sitter and update specified NODES.
 
 Each element in NODES must contain the following fields:
@@ -237,6 +237,9 @@ The target file is first loaded into a temporary buffer and the
 requested updates are applied in decreasing line number order.  After
 all changes have been made, the buffer is reparsed.  The target file is
 updated only if the parse is successful.
+
+Updated nodes are formatted via `indent-region' unless SKIP-FORMAT is
+not nil.
 
 On success, returns the list of updated nodes:
 
@@ -261,7 +264,8 @@ On success, returns the list of updated nodes:
                  (end (treesit-node-end node)))
              (goto-char start)
              (delete-region start end)
-             (insert new-text))))
+             (insert new-text)
+             (unless skip-format (indent-region start end)))))
        (let* ((parser2 (treesit-parser-create language))
               (root2 (treesit-parser-root-node parser2)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
@@ -298,7 +302,11 @@ On success, returns the list of updated nodes:
                             :line (:type integer)
                             :text_hash (:type string)
                             :new_text (:type string)))
-     :description "List of nodes to update."))
+     :description "List of nodes to update.")
+   ( :name "skip_format"
+     :type boolean
+     :description "If true, do not format/reindent the new node."
+     :optional t))
  :confirm t)
 
 (defun rb-tools-replace-line-ranges (path ranges)
