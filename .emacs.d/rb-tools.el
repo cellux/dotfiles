@@ -9,6 +9,13 @@
 (require 'cider)
 (require 'subr-x)
 
+(defun rb-tools--truthy? (arg)
+  "Return the Emacs Lisp truth value of the boolean argument ARG from a tool call."
+  (when arg
+    (if (eq arg :json-false)
+        nil
+      t)))
+
 (defun rb-tools-nrepl-eval (input &optional ns)
   "Send INPUT to currently connected Clojure/ClojureScript REPL for evaluation.
 The form is evaluated in the namespace NS if specified or in the current namespace otherwise.
@@ -222,7 +229,7 @@ Each element in the returned list contains the following fields:
      :description "List of nodes to return."))
  :confirm t)
 
-(defun rb-tools-ts-update-nodes (path nodes &optional skip-format)
+(defun rb-tools-ts-update-nodes (path nodes &optional skip-format dry-run)
   "Parse PATH using Tree-sitter and update specified NODES.
 
 Each element in NODES must contain the following fields:
@@ -239,9 +246,14 @@ all changes have been made, the buffer is reparsed.  The target file is
 updated only if the parse is successful.
 
 Updated nodes are formatted via `indent-region' unless SKIP-FORMAT is
-not nil.
+non-nil.
 
-On success, returns the list of updated nodes:
+If DRY-RUN is non-nil, apply the edits in-memory, reparse to validate,
+and return a report without writing PATH.  The report includes the
+planned changes, the reparse result, and a flag indicating no write
+occurred.
+
+On success, returns the list of updated nodes (or the dry-run report):
 
 - index: integer - node index
 - kind: string - node kind
@@ -253,29 +265,40 @@ On success, returns the list of updated nodes:
      (let* ((updates (sort (seq-into nodes 'list)
                            (lambda (a b)
                              (> (plist-get a :line)
-                                (plist-get b :line))))))
+                                (plist-get b :line)))))
+            (changes '()))
        (dolist (spec updates)
          (unless (stringp (plist-get spec :new_text))
            (error "Missing new_text for node %s" (plist-get spec :index)))
-         (let* ((validated (rb-tools--ts-validate-node root spec))
+         (let* ((validated (rb-tools--ts-validate-node (treesit-buffer-root-node) spec))
                 (node (nth 0 validated))
+                (old-text (treesit-node-text node))
                 (new-text (plist-get spec :new_text)))
            (let ((start (treesit-node-start node))
                  (end (treesit-node-end node)))
              (goto-char start)
              (delete-region start end)
              (insert new-text)
-             (unless skip-format (indent-region start end)))))
+             (unless (rb-tools--truthy? skip-format)
+               (let ((new-end (point)))
+                 (indent-region start new-end))))
+           (push (list :index (plist-get spec :index)
+                       :kind (plist-get spec :kind)
+                       :line (plist-get spec :line)
+                       :old_text_hash (secure-hash 'md5 old-text)
+                       :new_text_hash (secure-hash 'md5 new-text)
+                       :old_text old-text
+                       :new_text new-text)
+                 changes)))
        (let* ((parser2 (treesit-parser-create language))
               (root2 (treesit-parser-root-node parser2)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
            (error (or (rb-tools--ts-node-parse-errors root2)
                       "Tree-sitter reparsing failed")))
-         (write-region (point-min) (point-max) path nil 'silent)
          (let* ((child-count (treesit-node-child-count root2 t))
                 (result '()))
            (dotimes (i child-count)
-             (let* ((node (treesit-node-child root i t))
+             (let* ((node (treesit-node-child root2 i t))
                     (text (treesit-node-text node))
                     (line (line-number-at-pos (treesit-node-start node))))
                (push (list :index i
@@ -283,7 +306,13 @@ On success, returns the list of updated nodes:
                            :line line
                            :text_hash (secure-hash 'md5 text))
                      result)))
-           (nreverse result)))))))
+           (if (rb-tools--truthy? dry-run)
+               (list :dry_run t
+                     :changes (nreverse changes)
+                     :result (nreverse result))
+             (progn
+               (write-region (point-min) (point-max) path nil 'silent)
+               (nreverse result)))))))))
 
 (gptel-make-tool
  :name "tree_sitter_update_nodes"
@@ -306,6 +335,10 @@ On success, returns the list of updated nodes:
    ( :name "skip_format"
      :type boolean
      :description "If true, do not format/reindent the new node."
+     :optional t)
+   ( :name "dry_run"
+     :type boolean
+     :description "If true, do not modify the file, just report what would be done."
      :optional t))
  :confirm t)
 
@@ -332,7 +365,7 @@ Each element of RANGES contains the following fields:
         (let* ((total-lines (line-number-at-pos (point-max)))
                (start (plist-get spec :start))
                (end (plist-get spec :end))
-               (end-inc (plist-get spec :end_inclusive))
+               (end-inc (rb-tools--truthy? (plist-get spec :end_inclusive)))
                (new-text (plist-get spec :new_text)))
           (unless (stringp new-text)
             (error "Missing new_text for range starting at %s" start))
