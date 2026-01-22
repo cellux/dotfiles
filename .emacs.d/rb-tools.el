@@ -210,15 +210,11 @@ Optionally specify PREVIEW-LINES to control how many lines are included in each 
  :confirm t
  :include t)
 
-(defun rb-tools-ts-get-nodes (path nodes)
-  "Parse PATH using Tree-sitter and return the text of specified NODES.
+(defun rb-tools-ts-get-nodes (path line-numbers)
+  "Parse PATH using Tree-sitter and return the text of nodes on LINE-NUMBERS.
 
-Each element in NODES must contain the following fields:
-
-- index: integer - node index
-- kind: string - node kind
-- line: integer - line number
-- text_hash: string - hash of node text
+LINE-NUMBERS should be a list of integer line numbers referencing the start
+of each target node.
 
 Each element in the returned list contains the following fields:
 
@@ -230,27 +226,35 @@ Each element in the returned list contains the following fields:
   (rb-tools--ts-with-root
    path nil
    (lambda (_language _parser root)
-     (let ((result '()))
-       (dolist (spec (seq-into nodes 'list))
-         (let* ((validated (rb-tools--ts-validate-node root spec))
-                (node (nth 0 validated))
-                (text (nth 1 validated))
-                (kind (nth 2 validated))
-                (line (nth 3 validated))
-                (hash (nth 4 validated)))
-           (push (list :index (plist-get spec :index)
-                       :kind kind
-                       :line line
-                       :text_hash hash
-                       :text text)
-                 result)))
+     (let* ((child-count (treesit-node-child-count root t))
+            (lines (seq-into line-numbers 'list))
+            (result '()))
+       (dolist (line lines)
+         (unless (and (integerp line) (>= line 1))
+           (error "Invalid line number: %s" line))
+         (let ((entry
+                (catch 'found
+                  (dotimes (idx child-count)
+                    (let* ((node (treesit-node-child root idx t))
+                           (node-line (line-number-at-pos (treesit-node-start node))))
+                      (when (= node-line line)
+                        (let ((text (treesit-node-text node)))
+                          (throw 'found
+                                 (list :index idx
+                                       :kind (treesit-node-type node)
+                                       :line node-line
+                                       :text_hash (secure-hash 'md5 text)
+                                       :text text)))))))))
+           (unless entry
+             (error "No node starts on line %s" line))
+           (push entry result)))
        (nreverse result)))))
 
 ;; (rb-tools-ts-list-nodes "/home/rb/projects/dotfiles/.emacs.d/rb-tools.el")
 
 ;; (rb-tools-ts-list-nodes "/home/rb/projects/mixtape/box.go")
 
-;; (rb-tools-ts-get-nodes "/home/rb/projects/mixtape/box.go" '((:index 3 :kind "method_declaration" :line 12 :text_hash "4a1956f47bfc77ec05f31f0e2e6a4c52" :preview "func (box *Box[T]) Get() T {")))
+;; (rb-tools-ts-get-nodes "/home/rb/projects/mixtape/box.go" '(12))
 
 (gptel-make-tool
  :name "tree_sitter_get_nodes"
@@ -261,14 +265,11 @@ Each element in the returned list contains the following fields:
  '(( :name "path"
      :type string
      :description "Path to the source code file.")
-   ( :name "nodes"
+   ( :name "line_numbers"
      :type array
-     :items ( :type object
-              :properties ( :index (:type integer)
-                            :kind (:type string)
-                            :line (:type integer)
-                            :text_hash (:type string)))
-     :description "List of nodes to return."))
+     :items (:type integer)
+     :description "List of line numbers referencing the start of each target node.")
+   )
  :confirm t
  :include t)
 
