@@ -20,7 +20,7 @@ The rest of the response contains the value of the expression or the error messa
 
 (gptel-make-tool
  :name "nrepl_eval"
- :category "Clojure"
+ :category "rb"
  :description (documentation 'rb-tools-nrepl-eval)
  :function #'rb-tools-nrepl-eval
  :args
@@ -68,7 +68,7 @@ FN is called with three args: LANGUAGE, PARSER, ROOT."
               (error "Tree-sitter not ready for language %s" language))
             (let* ((parser (treesit-parser-create language))
                    (root (treesit-parser-root-node parser)))
-              (unless (rb-tools--ts-successfully-parsed? root)
+              (unless (rb-tools--ts-node-successfully-parsed? root)
                 (error "Tree-sitter failed to parse %s" path))
               (funcall fn language parser root))))
       (set-buffer-modified-p nil))))
@@ -124,7 +124,7 @@ Each AST node has the following fields:
 
 (gptel-make-tool
  :name "tree_sitter_list_nodes"
- :category "TreeSitter"
+ :category "rb"
  :description (documentation 'rb-tools-ts-list-nodes)
  :function #'rb-tools-ts-list-nodes
  :args
@@ -179,7 +179,7 @@ Each element in the returned list contains the following fields:
 
 (gptel-make-tool
  :name "tree_sitter_get_nodes"
- :category "TreeSitter"
+ :category "rb"
  :description (documentation 'rb-tools-ts-get-nodes)
  :function #'rb-tools-ts-get-nodes
  :args
@@ -237,7 +237,7 @@ updated only if the parse is successful."
 
 (gptel-make-tool
  :name "tree_sitter_update_nodes"
- :category "TreeSitter"
+ :category "rb"
  :description (documentation 'rb-tools-ts-update-nodes)
  :function #'rb-tools-ts-update-nodes
  :args
@@ -253,6 +253,78 @@ updated only if the parse is successful."
                             :text_hash (:type string)
                             :new_text (:type string)))
      :description "List of nodes to update."))
+ :confirm t)
+
+(defun rb-tools-replace-line-ranges (path ranges)
+  "Replace the specified line RANGES in PATH with new content.
+
+Each element of RANGES contains the following fields:
+
+- start: integer - line number of range start
+- end: integer - line number of range end
+- end_inclusive: boolean - is line at END included in the range?
+- new_text: string - replacement text"
+  (unless (file-readable-p path)
+    (error "File is not readable: %s" path))
+  (unless (file-writable-p path)
+    (error "File is not writable: %s" path))
+  (with-temp-buffer
+    (insert-file-contents path)
+    (let ((updates (sort (seq-into ranges 'list)
+                         (lambda (a b)
+                           (> (plist-get a :start)
+                              (plist-get b :start))))))
+      (dolist (spec updates)
+        (let* ((total-lines (line-number-at-pos (point-max)))
+               (start (plist-get spec :start))
+               (end (plist-get spec :end))
+               (end-inc (plist-get spec :end_inclusive))
+               (new-text (plist-get spec :new_text)))
+          (unless (stringp new-text)
+            (error "Missing new_text for range starting at %s" start))
+          (unless (and (integerp start) (>= start 1))
+            (error "Invalid start line: %s" start))
+          (unless (and (integerp end) (>= end 1))
+            (error "Invalid end line: %s" end))
+          (when (> start total-lines)
+            (error "Start line %s beyond end of file (%s)" start total-lines))
+          (when (> end total-lines)
+            (error "End line %s beyond end of file (%s)" end total-lines))
+          (when (> start end)
+            (error "Start line %s after end line %s" start end))
+          (let (start-pos end-pos)
+            (save-excursion
+              (goto-char (point-min))
+              (forward-line (1- start))
+              (setq start-pos (point)))
+            (save-excursion
+              (goto-char (point-min))
+              (forward-line (1- end))
+              (when end-inc
+                (forward-line 1))
+              (setq end-pos (point)))
+            (goto-char start-pos)
+            (delete-region start-pos end-pos)
+            (insert new-text)))))
+    (write-region (point-min) (point-max) path nil 'silent)))
+
+(gptel-make-tool
+ :name "replace_line_ranges"
+ :category "rb"
+ :description (documentation 'rb-tools-replace-line-ranges)
+ :function #'rb-tools-replace-line-ranges
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "ranges"
+     :type array
+     :items ( :type object
+              :properties ( :start (:type integer)
+                            :end (:type integer)
+                            :end_inclusive (:type boolean)
+                            :new_text (:type string)))
+     :description "List of line ranges to replace."))
  :confirm t)
 
 ;;; rb-tools.el ends here
