@@ -44,6 +44,32 @@ Returns nil if the parse failed and a non-nil value otherwise."
                     (or (treesit-node-check node 'has-error)
                         (treesit-node-check node 'missing)))))))
 
+(defun rb-tools--ts-node-parse-errors (node)
+  "Return a report of parse errors in NODE's subtree, or nil if none."
+  (when node
+    (let (errors)
+      (treesit-search-subtree
+       node
+       (lambda (n)
+         (let* ((node-type (treesit-node-type n))
+                (error? (string= node-type "ERROR"))
+                (missing? (treesit-node-check n 'missing)))
+           (when (or error? missing?)
+             (push (list :type node-type
+                         :line (line-number-at-pos (treesit-node-start n))
+                         :missing missing?
+                         :text (unless missing? (treesit-node-text n t)))
+                   errors)))))
+      (when errors
+        (mapconcat
+         (lambda (err)
+           (format "line %d: %s %s"
+                   (plist-get err :line)
+                   (plist-get err :type)
+                   (if (plist-get err :missing) "(missing)" (plist-get err :text))))
+         (nreverse errors)
+         "\n")))))
+
 (defun rb-tools--ts-with-root (path require-writable fn)
   "Open PATH in a temp buffer, ensure mode/Tree-sitter ready, and run FN.
 
@@ -69,7 +95,8 @@ FN is called with three args: LANGUAGE, PARSER, ROOT."
             (let* ((parser (treesit-parser-create language))
                    (root (treesit-parser-root-node parser)))
               (unless (rb-tools--ts-node-successfully-parsed? root)
-                (error "Tree-sitter failed to parse %s" path))
+                (error (or (rb-tools--ts-node-parse-errors root)
+                           (format "Tree-sitter failed to parse %s" path))))
               (funcall fn language parser root))))
       (set-buffer-modified-p nil))))
 
@@ -169,11 +196,9 @@ Each element in the returned list contains the following fields:
                  result)))
        (nreverse result)))))
 
-;; (rb-tools-ts-list-nodes "/home/rb/projects/dotfiles/.emacs.d/rb-tools.el")q
+;; (rb-tools-ts-list-nodes "/home/rb/projects/dotfiles/.emacs.d/rb-tools.el")
 
 ;; (rb-tools-ts-list-nodes "/home/rb/projects/mixtape/box.go")
-
-;; ((:index 0 :kind "package_clause" :line 1 :text_hash "8b75bc9db3ddddd09c3da91d38387339" :preview "package main") (:index 1 :kind "import_declaration" :line 3 :text_hash "5f26f138b736f5e1f13dbcbcd32c11ce" :preview "import (") (:index 2 :kind "type_declaration" :line 7 :text_hash "1161bfa084f3b03dd8f637f9b2f4539d" :preview "type Box[T any] struct {") (:index 3 :kind "method_declaration" :line 12 :text_hash "4a1956f47bfc77ec05f31f0e2e6a4c52" :preview "func (box *Box[T]) Get() T {") (:index 4 :kind "method_declaration" :line 18 :text_hash "cc601fcd91e614c77ff2e5d19a9b627a" :preview "func (box *Box[T]) Set(v T) {") (:index 5 :kind "method_declaration" :line 24 :text_hash "23057b94d43efa4227bbbe599f0681b0" :preview "func (box *Box[T]) Update(fn func(T) T) {"))
 
 ;; (rb-tools-ts-get-nodes "/home/rb/projects/mixtape/box.go" '((:index 3 :kind "method_declaration" :line 12 :text_hash "4a1956f47bfc77ec05f31f0e2e6a4c52" :preview "func (box *Box[T]) Get() T {")))
 
@@ -239,7 +264,8 @@ On success, returns the list of updated nodes:
        (let* ((parser2 (treesit-parser-create language))
               (root2 (treesit-parser-root-node parser2)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
-           (error "Tree-sitter reparsing failed"))
+           (error (or (rb-tools--ts-node-parse-errors root2)
+                      "Tree-sitter reparsing failed")))
          (write-region (point-min) (point-max) path nil 'silent)
          (let* ((child-count (treesit-node-child-count root2 t))
                 (result '()))
