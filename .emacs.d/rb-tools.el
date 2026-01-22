@@ -39,6 +39,32 @@ The rest of the response contains the value of the expression or the error messa
      :type string
      :description "The Clojure/ClojureScript namespace in which the form should be evaluated.")))
 
+(defun rb-tools-emacs-eval (form)
+  "Evaluate FORM in the connected Emacs instance and return the textual result.
+
+The first line of the response is OK if the call succeeded, ERROR if it did not.
+The rest of the response contains the evaluation result or the error message."
+  (unless (and (stringp form) (not (string-empty-p form)))
+    (error "Input expression is required"))
+  (condition-case err
+      (let ((value (with-temp-buffer
+                     (insert form)
+                     (goto-char (point-min))
+                     (eval (read (current-buffer))))))
+        (format "OK\n%s" (prin1-to-string value)))
+    (error (format "ERROR\n%s" (error-message-string err)))))
+
+(gptel-make-tool
+ :name "emacs_eval"
+ :category "rb"
+ :description (documentation 'rb-tools-emacs-eval)
+ :function #'rb-tools-emacs-eval
+ :args
+ '(( :name "input"
+     :type string
+     :description "The Emacs Lisp expression to evaluate inside the connected Emacs instance."))
+ :confirm t)
+
 (defvar rb-tools-major-mode-to-ts-lang-alist
   '((emacs-lisp-mode . elisp)
     (go-mode . go)))
