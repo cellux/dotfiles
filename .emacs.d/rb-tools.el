@@ -37,7 +37,9 @@ The rest of the response contains the value of the expression or the error messa
      :description "The form to evaluate in the context of the connected Clojure/ClojureScript app.")
    ( :name "ns"
      :type string
-     :description "The Clojure/ClojureScript namespace in which the form should be evaluated.")))
+     :description "The Clojure/ClojureScript namespace in which the form should be evaluated."))
+ :confirm t
+ :include t)
 
 (defun rb-tools-emacs-eval (form)
   "Evaluate FORM in the connected Emacs instance and return the textual result.
@@ -63,7 +65,8 @@ The rest of the response contains the evaluation result or the error message."
  '(( :name "input"
      :type string
      :description "The Emacs Lisp expression to evaluate inside the connected Emacs instance."))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defvar rb-tools-major-mode-to-ts-lang-alist
   '((emacs-lisp-mode . elisp)
@@ -204,7 +207,8 @@ Optionally specify PREVIEW-LINES to control how many lines are included in each 
      :type integer
      :description "Number of lines to include in the preview (defaults to 1)."
      :optional t))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools-ts-get-nodes (path nodes)
   "Parse PATH using Tree-sitter and return the text of specified NODES.
@@ -265,7 +269,8 @@ Each element in the returned list contains the following fields:
                             :line (:type integer)
                             :text_hash (:type string)))
      :description "List of nodes to return."))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools-ts-update-nodes (path nodes &optional skip-format dry-run)
   "Parse PATH using Tree-sitter and update specified NODES.
@@ -378,7 +383,8 @@ On success, returns the list of updated nodes (or the dry-run report):
      :type boolean
      :description "If true, do not modify the file, just report what would be done."
      :optional t))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools-replace-line-ranges (path ranges)
   "Replace the specified line RANGES in PATH with new content.
@@ -469,7 +475,8 @@ Each element of RANGES contains the following fields:
  '(( :name "path"
      :type string
      :description "Path of the file to read."))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools-write-file (path content)
   "Write CONTENT to the file at PATH."
@@ -537,7 +544,9 @@ EXTRA-ARGS is a string of additional flags passed to rg, parsed with
    ( :name "extra_args"
      :type string
      :description "Additional args to pass to rg, e.g. \"-g *.el --hidden\"."
-     :optional t)))
+     :optional t))
+ :confirm t
+ :include t)
 
 (defun rb-tools-fd (query &optional directory extra-args)
   "Run fd QUERY inside DIRECTORY and return its output as a string.
@@ -580,6 +589,8 @@ EXTRA-ARGS is a string of additional flags passed to fd, parsed with
      :description "Directory to search (defaults to current directory).")
    ( :name "extra_args"
      :type string
-     :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\".")))
+     :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
+ :confirm t
+ :include t)
 
 ;;; rb-tools.el ends here
