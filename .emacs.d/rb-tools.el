@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'cider)
+(require 'subr-x)
 
 (defun rb-tools-nrepl-eval (input &optional ns)
   "Send INPUT to currently connected Clojure/ClojureScript REPL for evaluation.
@@ -411,5 +412,95 @@ Each element of RANGES contains the following fields:
      :type string
      :description "New content of the file."))
  :confirm t)
+
+(defun rb-tools-rg (pattern &optional directory extra-args)
+  "Run ripgrep PATTERN inside DIRECTORY and return its output as a string.
+
+EXTRA-ARGS is a string of additional flags passed to rg, parsed with
+`split-string-and-unquote'."
+  (unless (and (stringp pattern) (not (string-empty-p pattern)))
+    (error "Pattern is required"))
+  (let* ((rg-program (or (executable-find "rg")
+                         (error "Executable not found: rg")))
+         (target-dir (if (and directory (not (string-empty-p directory)))
+                         (expand-file-name directory)
+                       default-directory)))
+    (unless (file-directory-p target-dir)
+      (error "Not a directory: %s" target-dir))
+    (let ((default-directory target-dir))
+      (with-temp-buffer
+        (let* ((args (append '("--line-number" "--color" "never" "--no-heading")
+                             (when (and extra-args (not (string-empty-p extra-args)))
+                               (split-string-and-unquote extra-args))
+                             (list pattern ".")))
+               (exit-code (apply #'process-file rg-program nil t nil args)))
+          (cond
+           ((<= exit-code 1)
+            (string-trim-right (buffer-string)))
+           (t
+            (error "Executable rg failed with exit code %s\n%s"
+                   exit-code
+                   (string-trim-right (buffer-string))))))))))
+
+(gptel-make-tool
+ :name "rg"
+ :category "rb"
+ :description "Run ripgrep in a directory and return matches."
+ :function #'rb-tools-rg
+ :args
+ '(( :name "pattern"
+     :type string
+     :description "Regex pattern to search for.")
+   ( :name "directory"
+     :type string
+     :description "Directory to search (defaults to current directory)."
+     :optional t)
+   ( :name "extra_args"
+     :type string
+     :description "Additional args to pass to rg, e.g. \"-g *.el --hidden\"."
+     :optional t)))
+
+(defun rb-tools-fd (query &optional directory extra-args)
+  "Run fd QUERY inside DIRECTORY and return its output as a string.
+
+EXTRA-ARGS is a string of additional flags passed to fd, parsed with
+`split-string-and-unquote'."
+  (unless (and (stringp query) (not (string-empty-p query)))
+    (error "Query is required"))
+  (let* ((fd-program (or (executable-find "fd")
+                         (error "Executable not found: fd")))
+         (target-dir (if (and directory (not (string-empty-p directory)))
+                         (expand-file-name directory)
+                       default-directory)))
+    (unless (file-directory-p target-dir)
+      (error "Not a directory: %s" target-dir))
+    (let ((default-directory target-dir))
+      (with-temp-buffer
+        (let* ((args (append '("--color" "never" "--hidden" "--follow")
+                             (when (and extra-args (not (string-empty-p extra-args)))
+                               (split-string-and-unquote extra-args))
+                             (list query ".")))
+               (exit-code (apply #'process-file fd-program nil t nil args)))
+          (if (= exit-code 0)
+              (string-trim-right (buffer-string))
+            (error "Executable fd failed with exit code %s\n%s"
+                   exit-code
+                   (string-trim-right (buffer-string)))))))))
+
+(gptel-make-tool
+ :name "fd"
+ :category "rb"
+ :description "Run fd in a directory and return matches."
+ :function #'rb-tools-fd
+ :args
+ '(( :name "query"
+     :type string
+     :description "Pattern to search for.")
+   ( :name "directory"
+     :type string
+     :description "Directory to search (defaults to current directory).")
+   ( :name "extra_args"
+     :type string
+     :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\".")))
 
 ;;; rb-tools.el ends here
