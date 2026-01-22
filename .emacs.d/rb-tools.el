@@ -129,7 +129,7 @@ FN is called with three args: LANGUAGE, PARSER, ROOT."
         (error "Hash mismatch for node %s" idx))
       (list node text kind line hash))))
 
-(defun rb-tools-ts-list-nodes (path)
+(defun rb-tools-ts-list-nodes (path &optional preview-lines)
   "Parse PATH using Tree-sitter and return the list of top-level AST nodes.
 
 Each AST node has the following fields:
@@ -138,7 +138,11 @@ Each AST node has the following fields:
 - kind: string - node kind
 - line: integer - line number
 - text_hash: string - hash of node text
-- preview: string - first line of node text"
+- preview: string - first PREVIEW-LINES lines of node text (default: 1)
+
+Optionally specify PREVIEW-LINES to control how many lines are included in each preview."
+  (unless (and (integerp preview-lines) (> preview-lines 0))
+    (setq preview-lines 1))
   (rb-tools--ts-with-root
    path nil
    (lambda (_language _parser root)
@@ -147,8 +151,12 @@ Each AST node has the following fields:
        (dotimes (i child-count)
          (let* ((node (treesit-node-child root i t))
                 (text (treesit-node-text node))
-                (preview (car (split-string text "\n")))
-                (line (line-number-at-pos (treesit-node-start node))))
+                (line (line-number-at-pos (treesit-node-start node)))
+                (lines (split-string text "\n"))
+                (line-count (length lines))
+                (preview-count (min preview-lines line-count))
+                (preview-lines-list (seq-take lines preview-count))
+                (preview (string-join preview-lines-list "\n")))
            (push (list :index i
                        :kind (treesit-node-type node)
                        :line line
@@ -165,7 +173,11 @@ Each AST node has the following fields:
  :args
  '(( :name "path"
      :type string
-     :description "Path to the source code file."))
+     :description "Path to the source code file.")
+   ( :name "preview_lines"
+     :type integer
+     :description "Number of lines to include in the preview (defaults to 1)."
+     :optional t))
  :confirm t)
 
 (defun rb-tools-ts-get-nodes (path nodes)
