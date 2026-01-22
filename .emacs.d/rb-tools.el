@@ -210,7 +210,14 @@ Each element in NODES must contain the following fields:
 The target file is first loaded into a temporary buffer and the
 requested updates are applied in decreasing line number order.  After
 all changes have been made, the buffer is reparsed.  The target file is
-updated only if the parse is successful."
+updated only if the parse is successful.
+
+On success, returns the list of updated nodes:
+
+- index: integer - node index
+- kind: string - node kind
+- line: integer - line number
+- text_hash: string - hash of new node text"
   (rb-tools--ts-with-root
    path t
    (lambda (language _parser root)
@@ -233,7 +240,19 @@ updated only if the parse is successful."
               (root2 (treesit-parser-root-node parser2)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
            (error "Tree-sitter reparsing failed"))
-         (write-region (point-min) (point-max) path nil 'silent))))))
+         (write-region (point-min) (point-max) path nil 'silent)
+         (let* ((child-count (treesit-node-child-count root2 t))
+                (result '()))
+           (dotimes (i child-count)
+             (let* ((node (treesit-node-child root i t))
+                    (text (treesit-node-text node))
+                    (line (line-number-at-pos (treesit-node-start node))))
+               (push (list :index i
+                           :kind (treesit-node-type node)
+                           :line line
+                           :text_hash (secure-hash 'md5 text))
+                     result)))
+           (nreverse result)))))))
 
 (gptel-make-tool
  :name "tree_sitter_update_nodes"
@@ -325,6 +344,46 @@ Each element of RANGES contains the following fields:
                             :end_inclusive (:type boolean)
                             :new_text (:type string)))
      :description "List of line ranges to replace."))
+ :confirm t)
+
+(defun rb-tools-read-file (path)
+  "Read the file at PATH and return its content."
+  (unless (file-readable-p path)
+    (error "File is not readable: %s" path))
+  (with-temp-buffer
+    (insert-file-contents path)
+    (buffer-string)))
+
+(gptel-make-tool
+ :name "read_file"
+ :category "rb"
+ :description (documentation 'rb-tools-read-file)
+ :function #'rb-tools-read-file
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path of the file to read."))
+ :confirm t)
+
+(defun rb-tools-write-file (path content)
+  "Write CONTENT to the file at PATH."
+  (unless (file-writable-p path)
+    (error "File is not writable: %s" path))
+  (with-temp-file path
+    (insert content)))
+
+(gptel-make-tool
+ :name "write_file"
+ :category "rb"
+ :description (documentation 'rb-tools-write-file)
+ :function #'rb-tools-write-file
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path of the file to write.")
+   ( :name "content"
+     :type string
+     :description "New content of the file."))
  :confirm t)
 
 ;;; rb-tools.el ends here
