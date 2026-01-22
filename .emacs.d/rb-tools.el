@@ -458,13 +458,30 @@ Each element of RANGES contains the following fields:
      :description "List of line ranges to replace."))
  :confirm t)
 
-(defun rb-tools-read-file (path)
-  "Read the file at PATH and return its content."
+(defun rb-tools-read-file (path &optional with-line-numbers)
+  "Read the file at PATH and return its content.
+If WITH-LINE-NUMBERS is non-nil, prefix each line with its number."
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
   (with-temp-buffer
     (insert-file-contents path)
-    (buffer-string)))
+    (if (rb-tools--truthy? with-line-numbers)
+        (let ((lines '())
+              (line-number 1))
+          (goto-char (point-min))
+          (while (not (eobp))
+            (let ((line (buffer-substring-no-properties
+                         (line-beginning-position)
+                         (line-end-position))))
+              (push (format "%d:%s" line-number line) lines))
+            (forward-line 1)
+            (setq line-number (1+ line-number)))
+          (let ((result (string-join (nreverse lines) "\n")))
+            (when (and (not (string-empty-p result))
+                       (eq (char-before (point-max)) ?\n))
+              (setq result (concat result "\n")))
+            result))
+      (buffer-string))))
 
 (gptel-make-tool
  :name "read_file"
@@ -474,7 +491,11 @@ Each element of RANGES contains the following fields:
  :args
  '(( :name "path"
      :type string
-     :description "Path of the file to read."))
+     :description "Path of the file to read.")
+   ( :name "with_line_numbers"
+     :type boolean
+     :description "If true, include line numbers."
+     :optional t))
  :confirm t
  :include t)
 
