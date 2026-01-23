@@ -734,8 +734,8 @@ Usable with schemas sourced from `get_json_schema_for_class'."
              (plist-put properties :class `( :type "string"
                                              :const ,class-string
                                              :description ,(format "Must be the literal string '%s'" class-string)))
-             (plist-put properties :id `( :type "integer"
-                                          :description ,(format "Unique numeric identifier of the %s object" class-string)))
+             (plist-put properties :id `( :type "string"
+                                          :description ,(format "Unique identifier of the %s object" class-string)))
              result))
   (error "Unknown class: %s" class))
 
@@ -766,7 +766,7 @@ TASKS may be associated with STORIES but they may also stand alone."
                                   :description "Long description of the task.
 
 Fleshes out all the details necessary for successful implementation.")
-                   :story ( :type "integer"
+                   :story ( :type "string"
                             :description "Link to the parent story which owns this task."))))
 
 (defun rb-tools-get-json-schema-for-class (class)
@@ -789,6 +789,133 @@ Fleshes out all the details necessary for successful implementation.")
  :confirm t
  :include t)
 
+
+;;; Object store ----------------------------------------------------------
+
+(require 'project)
+
+(defun rb-tools--project-root ()
+  "Return the current project root, defaulting to `default-directory'."
+  (or (when (and (featurep 'projectile)
+                 (fboundp 'projectile-project-root))
+        (ignore-errors (projectile-project-root)))
+      (when (fboundp 'project-current)
+        (when-let* ((proj (project-current nil default-directory)))
+          (project-root proj)))
+      default-directory))
+
+(defun rb-tools--sanitize-path-component (component)
+  "Return COMPONENT as a safe path segment string."
+  (let* ((raw (format "%s" component))
+         (clean (replace-regexp-in-string "/" "_" raw)))
+    (when (string-empty-p clean)
+      (error "Path component cannot be empty"))
+    clean))
+
+(defun rb-tools--object-store-base-dir (class id)
+  "Return filesystem path for object CLASS with ID."
+  (let* ((root (rb-tools--project-root))
+         (class-part (rb-tools--sanitize-path-component class))
+         (id-part (rb-tools--sanitize-path-component id)))
+    (expand-file-name (format ".objects/%s/%s" class-part id-part) root)))
+
+(defun rb-tools--extract-property (entry)
+  "Extract (NAME . VALUE) from property ENTRY.
+ENTRY may be a plist, alist, or hash table with keys :name/:value or name/value."
+  (let* ((name (cond
+               ((hash-table-p entry) (or (gethash "name" entry)
+                                        (gethash :name entry)))
+               (t (or (plist-get entry :name)
+                      (plist-get entry 'name)
+                      (alist-get :name entry)
+                      (alist-get 'name entry)))))
+         (value (cond
+                 ((hash-table-p entry) (or (gethash "value" entry)
+                                           (gethash :value entry)))
+                 (t (or (plist-get entry :value)
+                        (plist-get entry 'value)
+                        (alist-get :value entry)
+                        (alist-get 'value entry))))))
+    (cons name value)))
+
+(defun rb-tools--object-from-args (class id properties)
+  "Build an object alist from CLASS, ID and PROPERTIES array."
+  (unless (or (stringp class) (symbolp class))
+    (error "CLASS must be a string or symbol"))
+  (unless (stringp id)
+    (error "ID must be a string"))
+  (let* ((class-str (if (symbolp class) (symbol-name class) class))
+         (props (seq-into properties 'list))
+         (seen (make-hash-table :test #'equal))
+         (object (list (cons "class" class-str)
+                       (cons "id" id))))
+    (puthash "class" t seen)
+    (puthash "id" t seen)
+    (dolist (entry props)
+      (pcase-let* ((`(,name . ,value) (rb-tools--extract-property entry)))
+        (unless (and (stringp name) (not (string-empty-p name)))
+          (error "Property name must be a non-empty string"))
+        (when (member name '("class" "id"))
+          (error "Property %s is reserved" name))
+        (when (gethash name seen)
+          (error "Duplicate property: %s" name))
+        (puthash name t seen)
+        (push (cons name value) object)))
+    (nreverse object)))
+
+(defun rb-tools--write-object-to-filesystem (object)
+  "Persist OBJECT alist to the object store.
+OBJECT must contain at least keys `class' and `id'."
+  (let* ((class (cdr (assoc "class" object)))
+         (id (cdr (assoc "id" object))))
+    (unless class (error "Missing class property"))
+    (unless id (error "Missing id property"))
+    (let* ((base (rb-tools--object-store-base-dir class id)))
+      (when (file-exists-p base)
+        (error "Object %s/%s already exists" class id))
+      (make-directory base t)
+      (dolist (entry object)
+        (let* ((key (car entry))
+               (val (cdr entry))
+               (key-str (rb-tools--sanitize-path-component key))
+               (file (expand-file-name key-str base)))
+          (with-temp-file file
+            (insert val)))))))
+
+(defun rb-tools-insert-object (class id properties)
+  "Insert a new OBJECT into the store.
+
+CLASS (string), ID (string), and PROPERTIES (array of name/value pairs)
+are combined via `rb-tools--object-from-args', validated against the
+schema from `rb-tools-get-json-schema-for-class', and written to the
+object store.
+
+Returns the validated object alist."
+  (let* ((object (rb-tools--object-from-args class id properties))
+         (schema (rb-tools-get-json-schema-for-class class)))
+    (rb-tools--validate-json-object object schema)
+    (rb-tools--write-object-to-filesystem object)
+    object))
+
+(gptel-make-tool
+ :name "insert_object"
+ :category "rb"
+ :description (documentation 'rb-tools-insert-object)
+ :function #'rb-tools-insert-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "Additional properties as name/value pairs."
+           :optional t))
+ :confirm t)
 
 ;;; Tests -----------------------------------------------------------------
 (require 'ert)
