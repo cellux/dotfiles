@@ -16,7 +16,7 @@
         nil
       t)))
 
-(defun rb-tools-nrepl-eval (input &optional ns)
+(defun rb-tools-clojure-eval (input &optional ns)
   "Send INPUT to currently connected Clojure/ClojureScript REPL for evaluation.
 The form is evaluated in the namespace NS if specified or in the current namespace otherwise.
 The first line of the response is OK if the call succeeded and ERROR if it did not.
@@ -27,10 +27,10 @@ The rest of the response contains the value of the expression or the error messa
       (format "OK\n%s" (nrepl-dict-get response "value")))))
 
 (gptel-make-tool
- :name "nrepl_eval"
+ :name "clojure_eval"
  :category "rb"
- :description (documentation 'rb-tools-nrepl-eval)
- :function #'rb-tools-nrepl-eval
+ :description (documentation 'rb-tools-clojure-eval)
+ :function #'rb-tools-clojure-eval
  :args
  '(( :name "input"
      :type string
