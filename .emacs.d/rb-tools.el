@@ -41,7 +41,7 @@ The rest of the response contains the value of the expression or the error messa
  :confirm t
  :include t)
 
-(defun rb-tools-emacs-eval (form)
+(defun rb-tools-elisp-eval (form)
   "Evaluate FORM in the connected Emacs instance and return the textual result.
 
 The first line of the response is OK if the call succeeded, ERROR if it did not.
@@ -57,10 +57,10 @@ The rest of the response contains the evaluation result or the error message."
     (error (format "ERROR\n%s" (error-message-string err)))))
 
 (gptel-make-tool
- :name "emacs_eval"
+ :name "elisp_eval"
  :category "rb"
- :description (documentation 'rb-tools-emacs-eval)
- :function #'rb-tools-emacs-eval
+ :description (documentation 'rb-tools-elisp-eval)
+ :function #'rb-tools-elisp-eval
  :args
  '(( :name "input"
      :type string
