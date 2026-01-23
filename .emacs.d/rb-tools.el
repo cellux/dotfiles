@@ -6,6 +6,7 @@
 
 ;;; Code:
 
+(require 'cl-generic)
 (require 'subr-x)
 (require 'treesit)
 
@@ -618,6 +619,70 @@ EXTRA-ARGS is a string of additional flags passed to fd, parsed with
    ( :name "extra_args"
      :type string
      :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
+ :confirm t
+ :include t)
+
+(cl-defgeneric rb-tools--get-json-schema-for-class (class)
+  "Return the JSON schema for object store class CLASS."
+  (:method :around (class)
+           (let* ((result (cl-call-next-method))
+                  (properties (plist-get result :properties))
+                  (class-string (format "%s" class)))
+             (plist-put properties :class `( :type "string"
+                                             :const ,class-string
+                                             :description ,(format "Must be the literal string '%s'" class-string)))
+             (plist-put properties :id `( :type "integer"
+                                          :description ,(format "Unique numeric identifier of the %s object" class-string)))
+             result))
+  (error "Unknown class: %s" class))
+
+(cl-defmethod rb-tools--get-json-schema-for-class ((_class (eql 'STORY)))
+  "Return the JSON schema for object store class `STORY'."
+  '( :type "object"
+     :description "Objects of the STORY class describe user stories.
+
+One iteration of the development cycle typically consists of the following steps:
+
+1. Create user story
+2. Create tasks for the user story
+3. Implement individual tasks of the user story"
+     :properties ( :name ( :type "string"
+                           :description "Short name of the user story, serves as a one-line summary")
+                   :description ( :type "string"
+                                  :description "Long description of the user story"))))
+
+(cl-defmethod rb-tools--get-json-schema-for-class ((_class (eql 'TASK)))
+  "Return the JSON schema for object store class `TASK'."
+  '( :type "object"
+     :description "Objects of the TASK class describe development tasks.
+
+TASKS may be associated with STORIES but they may also stand alone."
+     :properties ( :name ( :type "string"
+                           :description "Short name of the task, serves as a one-line summary")
+                   :description ( :type "string"
+                                  :description "Long description of the task.
+
+Fleshes out all the details necessary for successful implementation.")
+                   :story ( :type "integer"
+                            :description "Link to the parent story which owns this task."))))
+
+(defun rb-tools-get-json-schema-for-class (class)
+  "Return the JSON schema for object store class CLASS."
+  (when (stringp class)
+    (setq class (intern class)))
+  (unless (symbolp class)
+    (error "CLASS must be string or symbol, got %s" class))
+  (rb-tools--get-json-schema-for-class class))
+
+(gptel-make-tool
+ :name "get_json_schema_for_class"
+ :category "rb"
+ :description (documentation 'rb-tools-get-json-schema-for-class)
+ :function #'rb-tools-get-json-schema-for-class
+ :args
+ '(( :name "class"
+     :type string
+     :description "Name of the class, an uppercase string."))
  :confirm t
  :include t)
 
