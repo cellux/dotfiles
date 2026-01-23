@@ -6,8 +6,14 @@
 
 ;;; Code:
 
-(require 'cider)
 (require 'subr-x)
+(require 'treesit)
+
+(declare-function cider-nrepl-sync-request:eval "cider-client")
+(declare-function nrepl-dict-contains "nrepl-dict")
+(declare-function nrepl-dict-get "nrepl-dict")
+
+(declare-function gptel-make-tool "gptel-request")
 
 (defun rb-tools--truthy? (arg)
   "Return the Emacs Lisp truth value of the boolean argument ARG from a tool call."
@@ -17,10 +23,10 @@
       t)))
 
 (defun rb-tools-clojure-eval (input &optional ns)
-  "Send INPUT to currently connected Clojure/ClojureScript REPL for evaluation.
-The form is evaluated in the namespace NS if specified or in the current namespace otherwise.
-The first line of the response is OK if the call succeeded and ERROR if it did not.
-The rest of the response contains the value of the expression or the error message."
+  "Evaluate INPUT in the connected Clojure/ClojureScript REPL in namespace NS.
+If NS is not given, evaluation happens in the current namespace of the REPL.
+The first line of the response is OK if the call succeeded, ERROR if it did not.
+The rest of the response contains the evaluation result or the error message."
   (let* ((response (cider-nrepl-sync-request:eval input nil ns)))
     (if (nrepl-dict-contains response "err")
         (format "ERROR\n%s" (nrepl-dict-get response "err"))
@@ -166,9 +172,9 @@ Each AST node has the following fields:
 - kind: string - node kind
 - line: integer - line number
 - text_hash: string - hash of node text
-- preview: string - first PREVIEW-LINES lines of node text (default: 1)
+- preview: string - first PREVIEW-LINES lines of node text
 
-Optionally specify PREVIEW-LINES to control how many lines are included in each preview."
+PREVIEW-LINES controls how many lines are included in each preview (default: 1)."
   (unless (and (integerp preview-lines) (> preview-lines 0))
     (setq preview-lines 1))
   (rb-tools--ts-with-root
