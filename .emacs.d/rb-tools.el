@@ -863,17 +863,26 @@ ENTRY may be a plist, alist, or hash table with keys :name/:value or name/value.
         (push (cons name value) object)))
     (nreverse object)))
 
-(defun rb-tools--write-object-to-filesystem (object)
+(defun rb-tools--write-object-to-filesystem (object &optional overwrite)
   "Persist OBJECT alist to the object store.
-OBJECT must contain at least keys `class' and `id'."
+OBJECT must contain at least keys `class' and `id'.
+If OVERWRITE is non-nil, the object must already exist and its properties
+are replaced.  When OVERWRITE is nil, an error is raised if the object
+already exists."
   (let* ((class (cdr (assoc "class" object)))
          (id (cdr (assoc "id" object))))
     (unless class (error "Missing class property"))
     (unless id (error "Missing id property"))
-    (let* ((base (rb-tools--object-store-base-dir class id)))
-      (when (file-exists-p base)
-        (error "Object %s-%s already exists" class id))
-      (make-directory base t)
+    (let* ((base (rb-tools--object-store-base-dir class id))
+           (exists (file-directory-p base)))
+      (cond
+       (exists
+        (unless overwrite
+          (error "Object %s-%s already exists" class id)))
+       (overwrite
+        (error "Object %s-%s does not exist" class id))
+       (t
+        (make-directory base t)))
       (dolist (entry object)
         (let* ((key (car entry))
                (val (cdr entry))
@@ -894,7 +903,7 @@ Returns the validated object alist."
   (let* ((object (rb-tools--object-from-args class id properties))
          (schema (rb-tools-get-json-schema-for-class class)))
     (rb-tools--validate-json-object object schema)
-    (rb-tools--write-object-to-filesystem object)
+    (rb-tools--write-object-to-filesystem object nil)
     object))
 
 (gptel-make-tool
@@ -981,6 +990,72 @@ returned.  The result is a plist with keyword keys."
            :items (:type string)
            :description "Optional list of property names to return; if omitted, all properties are returned."
            :optional t))
+ :confirm t)
+
+(defun rb-tools-update-object (class id properties)
+  "Update an existing object in the store.
+
+CLASS (string), ID (string), and PROPERTIES (array of name/value pairs)
+are combined via `rb-tools--object-from-args'. Only the provided
+properties are validated and updated; other properties remain unchanged.
+
+Returns the full updated object as a plist."
+  (let* ((schema (rb-tools-get-json-schema-for-class class))
+         (base (rb-tools--object-store-base-dir class id)))
+    (unless (file-directory-p base)
+      (error "Object %s-%s does not exist" class id))
+    ;; Read existing object
+    (let* ((existing (rb-tools--read-object-from-filesystem class id nil))
+           (existing-table (rb-tools--normalize-json-object existing))
+           (updates (seq-into properties 'list)))
+      ;; Apply updates
+      (dolist (entry updates)
+        (pcase-let* ((`(,name . ,value) (rb-tools--extract-property entry)))
+          (unless (and (stringp name) (not (string-empty-p name)))
+            (error "Property name must be a non-empty string"))
+          (when (member name '("class" "id"))
+            (error "Property %s is reserved" name))
+          (puthash name value existing-table)))
+      ;; Build updated alist preserving original keys order where possible
+      (let ((updated '()))
+        ;; Ensure class/id first, then other keys sorted for stability
+        (push (cons "class" (gethash "class" existing-table)) updated)
+        (push (cons "id" (gethash "id" existing-table)) updated)
+        (let* ((keys (seq-filter (lambda (k) (not (member k '("class" "id"))))
+                                 (hash-table-keys existing-table)))
+               (sorted (sort keys #'string<)))
+          (dolist (k sorted)
+            (push (cons k (gethash k existing-table)) updated)))
+        (setq updated (nreverse updated))
+        ;; Validate only provided properties against schema
+        (dolist (entry updates)
+          (pcase-let* ((`(,name . ,value) (rb-tools--extract-property entry)))
+            (let* ((definition (plist-get (plist-get schema :properties)
+                                          (rb-tools--ensure-keyword name))))
+              (unless definition
+                (error "Unknown property for class %s: %s" class name))
+              (rb-tools--validate-json-property name value definition))))
+        ;; Write back
+        (rb-tools--write-object-to-filesystem updated t)
+        (rb-tools--alist-to-keyword-plist updated)))))
+
+(gptel-make-tool
+ :name "update_object"
+ :category "rb"
+ :description (documentation 'rb-tools-update-object)
+ :function #'rb-tools-update-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "Properties to update as name/value pairs."))
  :confirm t)
 
 ;;; Tests -----------------------------------------------------------------
