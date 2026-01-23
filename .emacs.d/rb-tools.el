@@ -622,6 +622,109 @@ EXTRA-ARGS is a string of additional flags passed to fd, parsed with
  :confirm t
  :include t)
 
+(defvar rb-tools--json-value-missing
+  (make-symbol "rb-tools--json-value-missing")
+  "Sentinel value used internally when a JSON property is absent.")
+
+(defun rb-tools--json-key->string (key)
+  "Return KEY as a string, dropping the leading colon for keywords."
+  (cond
+   ((keywordp key)
+    (substring (symbol-name key) 1))
+   ((symbolp key)
+    (symbol-name key))
+   ((stringp key)
+    key)
+   (t
+    (format "%s" key))))
+
+(defun rb-tools--normalize-json-object (obj)
+  "Normalize OBJ (alist/plist/hash) into a hash table keyed by strings."
+  (let ((table (make-hash-table :test #'equal)))
+    (cond
+     ((hash-table-p obj)
+      (maphash (lambda (k v)
+                 (puthash (rb-tools--json-key->string k) v table)) obj))
+     ((and (listp obj) (seq-every-p #'consp obj))
+      (mapc (lambda (entry)
+              (let ((k (car entry))
+                    (v (cdr entry)))
+                (puthash (rb-tools--json-key->string k) v table)))
+            obj))
+     ((listp obj)
+      (let ((plist (copy-sequence obj)))
+        (unless (cl-evenp (length plist))
+          (error "Property list must contain an even number of elements"))
+        (while plist
+          (let ((k (pop plist))
+                (v (pop plist)))
+            (puthash (rb-tools--json-key->string k) v table)))))
+     (t
+      (error "Cannot normalize JSON object: %s" obj)))
+    table))
+
+(defun rb-tools--json-schema-properties-alist (schema)
+  "Return an alist of property definitions from SCHEMA."
+  (let ((properties (plist-get schema :properties))
+        (result '()))
+    (while properties
+      (let ((key (pop properties))
+            (value (pop properties)))
+        (push (cons (rb-tools--json-key->string key) value) result)))
+    (nreverse result)))
+
+(defun rb-tools--ensure-keyword (x)
+  "Coerces X into a keyword."
+  (if (keywordp x)
+      x
+    (intern (format ":%s" x))))
+
+(defun rb-tools--json-schema-property-required-p (key schema)
+  "Return non-nil if property KEY must be present according to SCHEMA."
+  (let* ((properties (plist-get schema :properties))
+         (definition (plist-get properties (rb-tools--ensure-keyword key)))
+         (required (seq-into (plist-get schema :required) 'list)))
+    (or (seq-contains-p required key)
+        (plist-get definition :const))))
+
+(defun rb-tools--json-value-satisfies-type-p (value type)
+  "Return non-nil if VALUE satisfies TYPE from a JSON schema."
+  (pcase type
+    ("string" (stringp value))
+    ("integer" (integerp value))
+    ("number" (numberp value))
+    ("boolean" (or (eq value t) (eq value nil)))
+    (_ (error "Unsupported schema type: %s" type))))
+
+(defun rb-tools--validate-json-property (key value definition)
+  "Validate VALUE for property KEY using DEFINITION."
+  (let ((type (plist-get definition :type))
+        (const (plist-get definition :const)))
+    (when type
+      (unless (rb-tools--json-value-satisfies-type-p value type)
+        (error "Property %s must be %s" key type)))
+    (when const
+      (unless (equal value const)
+        (error "Property %s must be %s" key const)))))
+
+(defun rb-tools--validate-json-object (obj schema)
+  "Validate OBJ against SCHEMA.
+Implements only a small subset of the JSON schema spec.
+Usable with schemas sourced from `get_json_schema_for_class'."
+  (unless (and schema (string= (plist-get schema :type) "object"))
+    (error "Schema must describe an object"))
+  (let ((properties (rb-tools--json-schema-properties-alist schema))
+        (normalized (rb-tools--normalize-json-object obj)))
+    (dolist (entry properties)
+      (let* ((key (car entry))
+             (definition (cdr entry))
+             (value (gethash key normalized rb-tools--json-value-missing)))
+        (if (eq value rb-tools--json-value-missing)
+            (when (rb-tools--json-schema-property-required-p key schema)
+              (error "Missing required property: %s" key))
+          (rb-tools--validate-json-property key value definition))))
+    t))
+
 (cl-defgeneric rb-tools--get-json-schema-for-class (class)
   "Return the JSON schema for object store class CLASS."
   (:method :around (class)
@@ -685,5 +788,51 @@ Fleshes out all the details necessary for successful implementation.")
      :description "Name of the class, an uppercase string."))
  :confirm t
  :include t)
+
+
+;;; Tests -----------------------------------------------------------------
+(require 'ert)
+
+(ert-deftest rb-tools--normalize-json-object/plist-and-alist ()
+  (let* ((plist '(:name "Story" story 42))
+         (alist '((:name . "Story") (story . 42)))
+         (hash (let ((h (make-hash-table :test #'equal)))
+                 (puthash :name "Story" h)
+                 (puthash 'story 42 h)
+                 h)))
+    (dolist (obj (list plist alist hash))
+      (let ((tbl (rb-tools--normalize-json-object obj)))
+        (should (equal (gethash "name" tbl) "Story"))
+        (should (equal (gethash "story" tbl) 42))))))
+
+(ert-deftest rb-tools--validate-json-object/accepts-valid-story ()
+  (let* ((schema (rb-tools--get-json-schema-for-class 'STORY))
+         (obj '((class . "STORY") (id . 1) (name . "Login") (description . "As a user..."))))
+    (should (rb-tools--validate-json-object obj schema))))
+
+(ert-deftest rb-tools--validate-json-object/rejects-missing-required-const ()
+  (let* ((schema (rb-tools--get-json-schema-for-class 'STORY))
+         (obj '((id . 1) (name . "Login"))))
+    (should-error (rb-tools--validate-json-object obj schema))))
+
+(ert-deftest rb-tools--validate-json-object/rejects-wrong-type ()
+  (let* ((schema (rb-tools--get-json-schema-for-class 'TASK))
+         (obj '((class . "TASK") (id . 2) (name . "Implement") (story . "not-integer"))))
+    (should-error (rb-tools--validate-json-object obj schema))))
+
+(ert-deftest rb-tools--validate-json-object/rejects-wrong-const ()
+  (let* ((schema (rb-tools--get-json-schema-for-class 'TASK))
+         (obj '((class . "STORY") (id . 3) (name . "Mismatch"))))
+    (should-error (rb-tools--validate-json-object obj schema))))
+
+(ert-deftest rb-tools--json-schema-property-required-p/const-and-required ()
+  (let ((schema '( :type "object"
+                   :properties ( :class (:const "STORY")
+                                 :name (:type "string")
+                                 :description (:type "string"))
+                   :required (:name))))
+    (should (rb-tools--json-schema-property-required-p :class schema))
+    (should (rb-tools--json-schema-property-required-p :name schema))
+    (should-not (rb-tools--json-schema-property-required-p :description schema))))
 
 ;;; rb-tools.el ends here
