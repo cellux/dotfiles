@@ -888,6 +888,8 @@ already exists."
                (val (cdr entry))
                (key-str (rb-tools--sanitize-path-component key))
                (file (expand-file-name key-str base)))
+          (unless (stringp val)
+            (error "Property %s value must be a string" key))
           (with-temp-file file
             (insert val)))))))
 
@@ -924,17 +926,19 @@ Returns the validated object alist."
                                   :value (:type string)))
            :description "Additional properties as name/value pairs."
            :optional t))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools--read-object-from-filesystem (class id &optional properties)
   "Return the object ID of CLASS from the store as an alist.
 If PROPERTIES is non-nil, it must be a list/array of property names to
-return; when PROPERTIES is nil, return all properties."
-  (let ((base (rb-tools--object-store-base-dir class id)))
+return; when PROPERTIES is nil or empty, return all properties."
+  (let* ((base (rb-tools--object-store-base-dir class id))
+         (prop-list (when properties (seq-into properties 'list))))
     (unless (file-directory-p base)
       (error "Object %s-%s does not exist" class id))
-    (if properties
-        (let ((keys (seq-into properties 'list))
+    (if (and prop-list (not (seq-empty-p prop-list)))
+        (let ((keys prop-list)
               (result '()))
           (dolist (key keys)
             (unless (and (stringp key) (not (string-empty-p key)))
@@ -961,8 +965,8 @@ return; when PROPERTIES is nil, return all properties."
   (let ((plist '()))
     (dolist (entry alist)
       (pcase-let ((`(,k . ,v) entry))
-        (push v plist)
-        (push (rb-tools--ensure-keyword k) plist)))
+        (push (rb-tools--ensure-keyword k) plist)
+        (push v plist)))
     (nreverse plist)))
 
 (defun rb-tools-get-object (class id &optional properties)
@@ -990,7 +994,8 @@ returned.  The result is a plist with keyword keys."
            :items (:type string)
            :description "Optional list of property names to return; if omitted, all properties are returned."
            :optional t))
- :confirm t)
+ :confirm t
+ :include t)
 
 (defun rb-tools-update-object (class id properties)
   "Update an existing object in the store.
@@ -1056,7 +1061,99 @@ Returns the full updated object as a plist."
                     :properties ( :name (:type string)
                                   :value (:type string)))
            :description "Properties to update as name/value pairs."))
- :confirm t)
+ :confirm t
+ :include t)
+
+(defun rb-tools--list-object-ids (class)
+  "Return a list of object IDs for CLASS from the store."
+  (let* ((class-dir (expand-file-name
+                     (format ".objects/%s" (rb-tools--sanitize-path-component class))
+                     (rb-tools--project-root)))
+         (ids '()))
+    (when (file-directory-p class-dir)
+      (dolist (entry (directory-files class-dir nil "^[^.].*" t))
+        (let ((full (expand-file-name entry class-dir)))
+          (when (file-directory-p full)
+            (push entry ids)))))
+    (nreverse ids)))
+
+(cl-defun rb-tools-find-object (class &optional id properties)
+  "Find objects of CLASS satisfying the search criteria in ID and PROPERTIES.
+
+Returns only objects satisfying every provided search criterion.  ID,
+when supplied, is treated as a regex matched against the object's id
+property.  PROPERTIES, when supplied, is a list/array of name/value
+pairs where VALUE is a regex matched against the property's file
+content.
+
+Returns a list of matching objects as plists (keyword keys)."
+  (unless (or (stringp class) (symbolp class))
+    (error "CLASS must be a string or symbol"))
+  (when (and id (not (and (stringp id) (not (string-empty-p id)))))
+    (error "ID regex must be a non-empty string when provided"))
+  (let* ((class-str (if (symbolp class) (symbol-name class) class))
+         (class-dir (expand-file-name
+                     (format ".objects/%s" (rb-tools--sanitize-path-component class-str))
+                     (rb-tools--project-root))))
+    (unless (file-directory-p class-dir)
+      (cl-return-from rb-tools-find-object '()))
+    (let* ((filters (seq-into properties 'list))
+           (candidates (rb-tools--list-object-ids class-str)))
+      (unless candidates
+        (cl-return-from rb-tools-find-object '()))
+      (when id
+        (let* ((output (rb-tools-rg id class-dir "--glob id"))
+               (match-set (make-hash-table :test #'equal)))
+          (dolist (line (split-string output "\n" t))
+            (when (string-match "^\\(.*\\):[0-9]+:" line)
+              (let* ((matched-path (match-string 1 line))
+                     (abs-path (expand-file-name matched-path class-dir))
+                     (relative (file-relative-name abs-path class-dir))
+                     (oid (car (split-string relative "/" t))))
+                (when oid (puthash oid t match-set)))))
+          (setq candidates (seq-filter (lambda (oid) (gethash oid match-set)) candidates)))
+        (unless candidates
+          (cl-return-from rb-tools-find-object '())))
+      (while (and filters candidates)
+        (pcase-let* ((`(,pname . ,regex) (rb-tools--extract-property (pop filters))))
+          (unless (and (stringp pname) (not (string-empty-p pname)))
+            (error "Property name must be a non-empty string"))
+          (unless (and (stringp regex) (not (string-empty-p regex)))
+            (error "Property regex must be a non-empty string"))
+          (let* ((prop-file (rb-tools--sanitize-path-component pname))
+                 (output (rb-tools-rg regex class-dir (format "--glob %s" prop-file)))
+                 (match-set (make-hash-table :test #'equal)))
+            (dolist (line (split-string output "\n" t))
+              (when (string-match "^\\(.*\\):[0-9]+:" line)
+                (let* ((matched-path (match-string 1 line))
+                       (abs-path (expand-file-name matched-path class-dir))
+                       (relative (file-relative-name abs-path class-dir))
+                       (oid (car (split-string relative "/" t))))
+                  (when oid (puthash oid t match-set)))))
+            (setq candidates (seq-filter (lambda (oid) (gethash oid match-set)) candidates)))))
+      (mapcar (lambda (oid) (rb-tools-get-object class-str oid)) candidates))))
+
+(gptel-make-tool
+ :name "find_object"
+ :category "rb"
+ :description (documentation 'rb-tools-find-object)
+ :function #'rb-tools-find-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Optional object identifier regex to restrict search."
+           :optional t)
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "List of property name/regex pairs to match content."
+           :optional t))
+ :confirm t
+ :include t)
 
 ;;; Tests -----------------------------------------------------------------
 (require 'ert)
