@@ -872,7 +872,7 @@ OBJECT must contain at least keys `class' and `id'."
     (unless id (error "Missing id property"))
     (let* ((base (rb-tools--object-store-base-dir class id)))
       (when (file-exists-p base)
-        (error "Object %s/%s already exists" class id))
+        (error "Object %s-%s already exists" class id))
       (make-directory base t)
       (dolist (entry object)
         (let* ((key (car entry))
@@ -914,6 +914,72 @@ Returns the validated object alist."
                     :properties ( :name (:type string)
                                   :value (:type string)))
            :description "Additional properties as name/value pairs."
+           :optional t))
+ :confirm t)
+
+(defun rb-tools--read-object-from-filesystem (class id &optional properties)
+  "Return the object ID of CLASS from the store as an alist.
+If PROPERTIES is non-nil, it must be a list/array of property names to
+return; when PROPERTIES is nil, return all properties."
+  (let ((base (rb-tools--object-store-base-dir class id)))
+    (unless (file-directory-p base)
+      (error "Object %s-%s does not exist" class id))
+    (if properties
+        (let ((keys (seq-into properties 'list))
+              (result '()))
+          (dolist (key keys)
+            (unless (and (stringp key) (not (string-empty-p key)))
+              (error "Property name must be a non-empty string: %s" key))
+            (let ((file (expand-file-name (rb-tools--sanitize-path-component key) base)))
+              (unless (file-readable-p file)
+                (error "Missing property %s for object %s-%s" key class id))
+              (with-temp-buffer
+                (insert-file-contents file)
+                (push (cons key (buffer-string)) result))))
+          (nreverse result))
+      (let ((files (directory-files base nil "^[^.].*" t))
+            (result '()))
+        (dolist (fname files)
+          (let ((file (expand-file-name fname base)))
+            (when (file-regular-p file)
+              (with-temp-buffer
+                (insert-file-contents file)
+                (push (cons fname (buffer-string)) result)))))
+        (nreverse result)))))
+
+(defun rb-tools--alist-to-keyword-plist (alist)
+  "Return ALIST converted to a plist with keyword keys, preserving order."
+  (let ((plist '()))
+    (dolist (entry alist)
+      (pcase-let ((`(,k . ,v) entry))
+        (push v plist)
+        (push (rb-tools--ensure-keyword k) plist)))
+    (nreverse plist)))
+
+(defun rb-tools-get-object (class id &optional properties)
+  "Retrieve an object from the store.
+
+CLASS and ID identify the object.  PROPERTIES, if provided, is an
+array/list of property names to return; when omitted, all properties are
+returned.  The result is a plist with keyword keys."
+  (let ((alist (rb-tools--read-object-from-filesystem class id properties)))
+    (rb-tools--alist-to-keyword-plist alist)))
+
+(gptel-make-tool
+ :name "get_object"
+ :category "rb"
+ :description (documentation 'rb-tools-get-object)
+ :function #'rb-tools-get-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items (:type string)
+           :description "Optional list of property names to return; if omitted, all properties are returned."
            :optional t))
  :confirm t)
 
