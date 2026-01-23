@@ -109,8 +109,7 @@ Returns nil if the parse failed and a non-nil value otherwise."
 
 (defun rb-tools--ts-with-root (path require-writable fn)
   "Open PATH in a temp buffer, ensure mode/Tree-sitter ready, and run FN.
-
-FN is called with three args: LANGUAGE, PARSER, ROOT."
+If REQUIRE-WRITABLE is non-nil, verify that path is writable."
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
   (when require-writable
@@ -134,7 +133,7 @@ FN is called with three args: LANGUAGE, PARSER, ROOT."
               (unless (rb-tools--ts-node-successfully-parsed? root)
                 (error (or (rb-tools--ts-node-parse-errors root)
                            (format "Tree-sitter failed to parse %s" path))))
-              (funcall fn language parser root))))
+              (funcall fn))))
       (set-buffer-modified-p nil))))
 
 (defun rb-tools--ts-validate-node (root spec)
@@ -174,8 +173,9 @@ Optionally specify PREVIEW-LINES to control how many lines are included in each 
     (setq preview-lines 1))
   (rb-tools--ts-with-root
    path nil
-   (lambda (_language _parser root)
-     (let* ((child-count (treesit-node-child-count root t))
+   (lambda ()
+     (let* ((root (treesit-buffer-root-node))
+            (child-count (treesit-node-child-count root t))
             (result '()))
        (dotimes (i child-count)
          (let* ((node (treesit-node-child root i t))
@@ -225,8 +225,9 @@ Each element in the returned list contains the following fields:
 - text: string - full node text"
   (rb-tools--ts-with-root
    path nil
-   (lambda (_language _parser root)
-     (let* ((child-count (treesit-node-child-count root t))
+   (lambda ()
+     (let* ((root (treesit-buffer-root-node))
+            (child-count (treesit-node-child-count root t))
             (lines (seq-into line-numbers 'list))
             (result '()))
        (dolist (line lines)
@@ -305,7 +306,7 @@ On success, returns the list of updated nodes (or the dry-run report):
 - text_hash: string - hash of new node text"
   (rb-tools--ts-with-root
    path t
-   (lambda (language _parser root)
+   (lambda ()
      (let* ((updates (sort (seq-into nodes 'list)
                            (lambda (a b)
                              (> (plist-get a :line)
@@ -334,8 +335,7 @@ On success, returns the list of updated nodes (or the dry-run report):
                        :old_text old-text
                        :new_text new-text)
                  changes)))
-       (let* ((parser2 (treesit-parser-create language))
-              (root2 (treesit-parser-root-node parser2)))
+       (let* ((root2 (treesit-buffer-root-node)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
            (error (or (rb-tools--ts-node-parse-errors root2)
                       "Tree-sitter reparsing failed")))
