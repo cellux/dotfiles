@@ -1303,7 +1303,8 @@ _Development guidelines_
 
 "
   :tools '(:eval (rb-tools--preset-tools-dev))
-  :temperature 0.1)
+  :temperature 0.1
+  :prompt-transform-functions '(:prepend (rb-gptel-mark-user-response-regions)))
 
 (gptel-make-preset 'repo-reader
   :description "Grants read access to all files in the Git repository."

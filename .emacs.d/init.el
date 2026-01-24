@@ -1026,4 +1026,5 @@
 ;; addons
 
 (let ((init-dir (file-name-directory (file-truename (or load-file-name buffer-file-name)))))
+  (load (expand-file-name "rb-gptel.el" init-dir))
   (load (expand-file-name "rb-tools.el" init-dir)))
