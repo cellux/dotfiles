@@ -1247,6 +1247,7 @@ _General guidelines_
 
 - if something is not clear, ask for clarification
 - never touch the =project.org= file, that is used to store our conversations
+- if a tool does not seem to work as advertised, stop immediately and report the problem
 
 "
   :tools '(:eval (rb-tools--preset-tools-dev))
