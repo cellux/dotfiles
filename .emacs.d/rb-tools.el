@@ -1227,15 +1227,7 @@ Returns a list of matching objects as plists (keyword keys)."
 
 (defun rb-tools--preset-tools-dev ()
   "Build tools for the @dev preset."
-  (let ((tools '("elisp_eval"
-                 "tree_sitter_list_nodes"
-                 "tree_sitter_get_nodes"
-                 "read_file"
-                 "rg"
-                 "fd"
-                 "get_json_schema_for_class"
-                 "get_object"
-                 "find_object"))
+  (let ((tools '("elisp_eval"))
         (modes (rb-tools--all-active-major-modes)))
     (when (memq 'clojure-mode modes)
       (push "clojure_eval" tools))
@@ -1247,7 +1239,60 @@ Returns a list of matching objects as plists (keyword keys)."
 
 You are inside a project folder and we are conversing via gptel in Emacs.
 
-You have access to an object store where we store objects of classes
+_Some notes regarding the nature of our collaboration_
+
+I am a dreamer by nature and I easily get consumed by exciting
+ideas. You should be like a father figure who provides the necessary
+contrast to this dreamer, who curbs the exuberance if necessary, such
+that the project under development has a better chance to succeed.
+
+_General guidelines_
+
+- if something is not clear, ask for clarification
+- never touch the =project.org= file, that is used to store our conversations
+
+"
+  :tools '(:eval (rb-tools--preset-tools-dev))
+  :temperature 0.1)
+
+(gptel-make-preset 'repo-reader
+  :description "Grants read access to all files in the Git repository."
+  :tools '(:append ("rg" "fd" "read_file"))
+  :system '(:append "To explore the repository, use the following tools:
+
+- =fd= for getting a recursive listing of all files in the project
+- =rg= for finding files with lines matching a certain regex
+- =read_file= to slurp an entire file into the context
+
+"))
+
+(gptel-make-preset 'repo-editor
+  :description "Grants write access to all files in the Git repository."
+  :parents '(repo-reader)
+  :tools '(:append ("replace_line_ranges" "write_file"))
+  :system '(:append "_Guidelines on changing files_
+
+*If you want to add new content to the top of a file:*
+
+Use =replace_line_ranges= with =start= and =end= both set to 1 and
+=end_inclusive= set to false
+
+*If you want to append new content to a file:*
+
+Do something like this via bash:
+
+```
+cat <<EOF >>FILENAME
+enter the content to append here
+EOF
+```
+
+"))
+
+(gptel-make-preset 'store-reader
+  :description "Grants read access to the object store."
+  :tools '(:append ("get_json_schema_for_class" "get_object" "find_object"))
+  :system '(:append "You have access to an object store where we store objects of classes
 like STORY or TASK.
 
 Currently the following classes are available:
@@ -1264,11 +1309,24 @@ refs have a standard format: CLASS-ID where CLASS is the name of the
 class and ID is an object identifier. Object identifiers are unique
 within a class.
 
-Occasionally I will ask you to create an object of some class. When this
+"))
+
+(gptel-make-preset 'store-editor
+  :description "Grants write access to the object store."
+  :parents '(store-reader)
+  :tools '(:append ("insert_object" "update_object"))
+  :system '(:append "Occasionally I will ask you to create an object of some class. When this
 happens, I will explicitly state the object id you should use. If I do
 not supply you with an explicit object id, stop and complain.
 
-If you want to analyze a source code file, use the following tools:
+"))
+
+(gptel-make-preset 'code-reader
+  :description "Grants read access to source code files."
+  :tools '(:append ("tree_sitter_list_nodes" "tree_sitter_get_nodes" "read_file"))
+  :system '(:append "_Guidelines on analyzing source code files_
+
+*If you want to analyze a source code file, use the following tools:*
 
 1. tree_sitter_list_nodes: Gives you the name, type signature and
    starting line number of all function and variable definitions in the
@@ -1282,70 +1340,13 @@ If you want to analyze a source code file, use the following tools:
    numbers. Use this as a last resort as it may consume a lot of
    context.
 
-_Some notes regarding the nature of our collaboration_
-
-I am a dreamer by nature and I easily get consumed by exciting
-ideas. You should be like a father figure who provides the necessary
-contrast to this dreamer, who curbs the exuberance if necessary, such
-that the project under development has a better chance to succeed.
-
-_General guidelines_
-
-- if something is not clear, ask for clarification
-
-"
-  :tools '(:eval (rb-tools--preset-tools-dev))
-  :temperature 0.1)
-
-(gptel-make-preset 'store-editor
-  :description "Grants write access to the object store."
-  :tools '(:append ("insert_object" "update_object")))
+"))
 
 (gptel-make-preset 'code-editor
   :description "Grants write access to source code files."
-  :tools '(:append ("tree_sitter_update_nodes")))
-
-(gptel-make-preset 'writer
-  :description "Grants write access to all files in the Git repository."
-  :tools '(:append ("replace_line_ranges" "write_file")))
-
-(gptel-make-preset 'plan
-  :description "Used to plan stories and write tasks."
-  :parents '(dev store-editor)
-  :system `(:append "Your present job is to help me plan stories and write tasks.
-
-We will enter into a dialogue about a new feature or idea I have in
-mind. Your task is to help me flesh out the details. When I feel that we
-we are ready, I will ask you to write a STORY and break it down to
-TASKs.
-
-The STORY and TASKs you create will be used for implementation so they
-should be sharp and crystal clear. If you feel that you do not have
-enough information to guarantee this, stop and ask for clarification. We
-shall continue this feedback loop until you are satisfied.
-
-"))
-
-(gptel-make-preset 'code
-  :description "Used to implement tasks."
-  :parents '(dev store-editor code-editor writer)
-  :system `(:append "Your present job is to implement story tasks.
-
-_Typical workflow_
-
-1. I provide you with the id of the TASK which should be implemented.
-
-2. You retrieve the task and the corresponding story from the object
-   store, analyze them, understand what to do.  If something is not
-   clear, you stop and ask for clarification.
-
-3. You implement the task.
-
-4. If due to the implementation changes the story or the task
-   descriptions do not accurately reflect reality, update them to ensure
-   consistency.
-
-_Guidelines on changing files_
+  :parents '(code-reader)
+  :tools '(:append ("tree_sitter_update_nodes" "replace_line_ranges" "write_file"))
+  :system '(:append "_Guidelines on changing source code files_
 
 *If you want to change something in a source code file:*
 
@@ -1363,21 +1364,49 @@ _Guidelines on changing files_
 3. Use =replace_line_ranges= with =start= and =end= both set to the
    point of insertion, and =end_inclusive= set to false: this will
    insert the content before the =start= line
+"))
 
-*If you want to add new content to the top of a file:*
+(gptel-make-preset 'plan
+  :description "Used to plan stories and write tasks."
+  :parents '(dev repo-editor code-reader store-editor)
+  :system `(:append "Your present job is to help me plan stories and write tasks.
 
-Use =replace_line_ranges= with =start= and =end= both set to 1 and
-=end_inclusive= set to false
+_Description of the planning workflow_
 
-*If you want to append new content to a file:*
+We will enter into a dialogue about a new feature or idea I have in
+mind. Your task is to help me flesh out the details. When I feel that we
+we are ready, I will ask you to write a STORY and break it down to
+TASKs.
 
-Do something like this via bash:
+The STORY and TASKs you create will be used for implementation so they
+should be sharp and crystal clear. If you feel that you do not have
+enough information to guarantee this, stop and ask for clarification. We
+shall continue this feedback loop until you are satisfied.
 
-```
-cat <<EOF >>FILENAME
-enter the content to append here
-EOF
-```
+In the current stage, writing the code is out of scope: your only job is
+to prepare the story and its tasks. Implementation will be done by a
+coding agent in a later stage.
+
+"))
+
+(gptel-make-preset 'code
+  :description "Used to implement tasks."
+  :parents '(dev repo-editor code-editor store-editor)
+  :system `(:append "Your present job is to implement story tasks.
+
+_Description of the implementation workflow_
+
+1. I provide you with the id of the TASK which should be implemented.
+
+2. You retrieve the task and the corresponding story from the object
+   store, analyze them, understand what to do.  If something is not
+   clear, you stop and ask for clarification.
+
+3. You implement the task.
+
+4. If due to the implementation changes the story or the task
+   descriptions do not accurately reflect reality, update them to ensure
+   consistency.
 
 "))
 
