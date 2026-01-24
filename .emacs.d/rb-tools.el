@@ -76,6 +76,48 @@ The rest of the response contains the evaluation result or the error message."
  :confirm t
  :include t)
 
+(defun rb-tools-bash-eval (script)
+  "Execute SCRIPT via Bash and return a plist describing the result.
+SCRIPT must be a non-empty string.  The script is executed through `bash
+-c' and stdout/stderr are captured.  The returned plist contains
+:exit_code, :stdout, and :stderr."
+  (unless (and (stringp script) (not (string-empty-p script)))
+    (error "Script string is required"))
+  (let* ((bash (or (executable-find "bash")
+                   (error "Executable not found: bash")))
+         (stdout (generate-new-buffer "*rb-tools-bash-eval-stdout*"))
+         (stderr (generate-new-buffer "*rb-tools-bash-eval-stderr*")))
+    (unwind-protect
+        (let* ((process (make-process :name "rb-tools-bash-eval"
+                                      :buffer stdout
+                                      :command (list bash "-c" script)
+                                      :noquery t
+                                      :stderr stderr
+                                      :sentinel (lambda (_proc _event) nil))))
+          (while (process-live-p process)
+            (accept-process-output process))
+          (let* ((exit-code (process-exit-status process))
+                 (stdout-str (with-current-buffer stdout (buffer-string)))
+                 (stderr-str (with-current-buffer stderr (buffer-string))))
+            (list :exit_code exit-code
+                  :stdout stdout-str
+                  :stderr stderr-str)))
+      (dolist (buffer (list stdout stderr))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer))))))
+
+(gptel-make-tool
+ :name "bash_eval"
+ :category "rb"
+ :description (documentation 'rb-tools-bash-eval)
+ :function #'rb-tools-bash-eval
+ :args
+ '(( :name "script"
+     :type string
+     :description "The Bash script to evaluate via `bash -c`."))
+ :confirm t
+ :include t)
+
 (defvar rb-tools-major-mode-to-ts-lang-alist
   '((emacs-lisp-mode . elisp)
     (go-mode . go)))
@@ -1224,7 +1266,7 @@ Returns a list of matching objects as plists (keyword keys)."
 
 (defun rb-tools--preset-tools-dev ()
   "Build tools for the @dev preset."
-  (let ((tools '("elisp_eval"))
+  (let ((tools '("elisp_eval" "bash_eval"))
         (modes (rb-tools--all-active-major-modes)))
     (when (memq 'clojure-mode modes)
       (push "clojure_eval" tools))
