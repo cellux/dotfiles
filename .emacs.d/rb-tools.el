@@ -582,7 +582,9 @@ EXTRA-ARGS is a string of additional flags passed to rg, parsed with
   "Run fd QUERY inside DIRECTORY and return its output as a string.
 
 EXTRA-ARGS is a string of additional flags passed to fd, parsed with
-`split-string-and-unquote'."
+`split-string-and-unquote'.
+
+Hidden directories are searched by default except the .git folder."
   (unless (and (stringp query) (not (string-empty-p query)))
     (error "Query is required"))
   (let* ((fd-program (or (executable-find "fd")
@@ -594,7 +596,8 @@ EXTRA-ARGS is a string of additional flags passed to fd, parsed with
       (error "Not a directory: %s" target-dir))
     (let ((default-directory target-dir))
       (with-temp-buffer
-        (let* ((args (append '("--color" "never" "--hidden" "--follow")
+        (let* ((args (append '("--color" "never" "--hidden" "--follow"
+                               "--exclude" ".git")
                              (when (and extra-args (not (string-empty-p extra-args)))
                                (split-string-and-unquote extra-args))
                              (list query ".")))
