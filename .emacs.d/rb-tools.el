@@ -284,7 +284,8 @@ PREVIEW-LINES controls preview length; defaults to 1 when nil or non-positive."
 
 (defun rb-tools--ts-select-nodes-by-line (children line-numbers)
   "Return nodes from CHILDREN whose :line matches LINE-NUMBERS.
-LINE-NUMBERS is a list of starting lines.  Raises an error if any line is missing."
+LINE-NUMBERS is a list of starting lines.
+Raises an error if any line is missing."
   (let ((lines (seq-into line-numbers 'list)))
     (mapcar
      (lambda (line)
@@ -310,7 +311,8 @@ PREVIEW-LINES controls preview length."
    preview-lines))
 
 (defun rb-tools--ts-get-nodes-pure (root line-numbers)
-  "Pure worker for `rb-tools-ts-get-nodes'. Accepts ROOT and LINE-NUMBERS."
+  "Pure worker for `rb-tools-ts-get-nodes'.
+Accepts ROOT and LINE-NUMBERS."
   (rb-tools--ts-select-nodes-by-line
    (rb-tools--ts-collect-root-children root)
    line-numbers))
@@ -874,7 +876,12 @@ One iteration of the development cycle typically consists of the following steps
 
 1. Create user story
 2. Create tasks for the user story
-3. Implement individual tasks of the user story"
+3. Implement individual tasks of the user story
+
+If I refer you to a STORY whose id looks like a prefix, try to find it
+via =find_objects=.
+
+"
      :properties ( :name ( :type "string"
                            :description "Short name of the user story, serves as a one-line summary")
                    :description ( :type "string"
@@ -894,6 +901,9 @@ number and <sequence> is an integer order.
 Example TASK identifiers: TASK-1-1-first, TASK-1-2-second, TASK-124-5-wrap-up
 
 TASK-124-5-wrap-up means the fifth task of STORY-124 with the slug `wrap-up'
+
+If I refer you to a TASK whose id looks like a prefix, try to find it
+via =find_objects=.
 
 "
      :properties ( :name ( :type "string"
@@ -1132,7 +1142,7 @@ returned.  The result is a plist with keyword keys."
   "Update an existing object in the store.
 
 CLASS (string), ID (string), and PROPERTIES (array of name/value pairs)
-are combined via `rb-tools--object-from-args'. Only the provided
+are combined via `rb-tools--object-from-args'.  Only the provided
 properties are validated and updated; other properties remain unchanged.
 
 Returns the full updated object as a plist."
@@ -1207,7 +1217,7 @@ Returns the full updated object as a plist."
             (push entry ids)))))
     (nreverse ids)))
 
-(cl-defun rb-tools-find-object (class &optional id properties)
+(cl-defun rb-tools-find-objects (class &optional id properties)
   "Find objects of CLASS satisfying the search criteria in ID and PROPERTIES.
 
 Returns only objects satisfying every provided search criterion.  ID,
@@ -1226,11 +1236,11 @@ Returns a list of matching objects as plists (keyword keys)."
                      (format ".store/%s" (rb-tools--sanitize-path-component class-str))
                      (rb-tools--project-root))))
     (unless (file-directory-p class-dir)
-      (cl-return-from rb-tools-find-object '()))
+      (cl-return-from rb-tools-find-objects '()))
     (let* ((filters (seq-into properties 'list))
            (candidates (rb-tools--list-object-ids class-str)))
       (unless candidates
-        (cl-return-from rb-tools-find-object '()))
+        (cl-return-from rb-tools-find-objects '()))
       (when id
         (let* ((output (rb-tools-rg id class-dir "--glob id"))
                (match-set (make-hash-table :test #'equal)))
@@ -1243,7 +1253,7 @@ Returns a list of matching objects as plists (keyword keys)."
                 (when oid (puthash oid t match-set)))))
           (setq candidates (seq-filter (lambda (oid) (gethash oid match-set)) candidates)))
         (unless candidates
-          (cl-return-from rb-tools-find-object '())))
+          (cl-return-from rb-tools-find-objects '())))
       (while (and filters candidates)
         (pcase-let* ((`(,pname . ,regex) (rb-tools--extract-property (pop filters))))
           (unless (and (stringp pname) (not (string-empty-p pname)))
@@ -1264,10 +1274,10 @@ Returns a list of matching objects as plists (keyword keys)."
       (mapcar (lambda (oid) (rb-tools-get-object class-str oid)) candidates))))
 
 (gptel-make-tool
- :name "find_object"
+ :name "find_objects"
  :category "rb"
- :description (documentation 'rb-tools-find-object)
- :function #'rb-tools-find-object
+ :description (documentation 'rb-tools-find-objects)
+ :function #'rb-tools-find-objects
  :args '(( :name "class"
            :type string
            :description "Object class, uppercase string.")
@@ -1383,6 +1393,63 @@ Cleans up the directory afterwards."
   ;; Non-integer line
   (should-error (rb-tools--ts-select-nodes-by-line '() '("x"))))
 
+(ert-deftest rb-tools--validate-line-range-specs/sorts-descending ()
+  (let* ((ranges (list (list :start 1 :end 1 :end_inclusive t :new_text "a")
+                       (list :start 3 :end 3 :end_inclusive t :new_text "c")
+                       (list :start 2 :end 2 :end_inclusive t :new_text "b")))
+         (sorted (rb-tools--validate-line-range-specs ranges 3)))
+    (should (equal (mapcar (lambda (r) (plist-get r :start)) sorted)
+                   '(3 2 1)))))
+
+(ert-deftest rb-tools--apply-line-range-updates/basic ()
+  (let* ((content "l1\nl2\nl3\n")
+         (ranges (list (list :start 2 :end 2 :end_inclusive t :new_text "X\n")))
+         (result (rb-tools--apply-line-range-updates content ranges)))
+    (should (string= result "l1\nX\nl3\n"))))
+
+(ert-deftest rb-tools--apply-line-range-updates/overlapping-order ()
+  (let* ((content "l1\nl2\nl3\nl4\n")
+         (ranges (list (list :start 2 :end 3 :end_inclusive t :new_text "X\n")
+                       (list :start 1 :end 1 :end_inclusive t :new_text "A\n")))
+         (result (rb-tools--apply-line-range-updates content ranges)))
+    (should (string= result "A\nX\nl4\n"))))
+
+(ert-deftest rb-tools-replace-line-ranges/writes-file ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "a\nb\nc\n")
+    (let ((ranges (list (list :start 2 :end 2 :end_inclusive t :new_text "B\n")
+                        (list :start 1 :end 1 :end_inclusive t :new_text "A\n"))))
+      (rb-tools-replace-line-ranges path ranges)
+      (should (string= (rb-tools--io-read-file path) "A\nB\nc\n")))))
+
+(ert-deftest rb-tools--validate-line-range-specs/errors ()
+  ;; start beyond file
+  (should-error (rb-tools--apply-line-range-updates "one" (list (list :start 2 :end 2 :end_inclusive t :new_text "x"))))
+  ;; end beyond file
+  (should-error (rb-tools--apply-line-range-updates "one" (list (list :start 1 :end 2 :end_inclusive t :new_text "x"))))
+  ;; start after end
+  (should-error (rb-tools--apply-line-range-updates "one\n" (list (list :start 2 :end 1 :end_inclusive t :new_text "x"))))
+  ;; missing new_text
+  (should-error (rb-tools--apply-line-range-updates "one\n" (list (list :start 1 :end 1 :end_inclusive t)))))
+
+(ert-deftest rb-tools-read-file/with-and-without-line-numbers ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "a\nb\n")
+    (should (string= (rb-tools-read-file path) "a\nb\n"))
+    (should (string= (rb-tools-read-file path t) "1:a\n2:b\n"))))
+
+(ert-deftest rb-tools-write-file/basic-and-read-only ()
+  (rb-tools--with-temp-file path
+    ;; happy path
+    (rb-tools-write-file path "ok\n")
+    (should (string= (rb-tools--io-read-file path) "ok\n"))
+    ;; make file read-only and expect failure
+    (set-file-modes path #o444)
+    (should-error (rb-tools-write-file path "fail") :type 'error)
+    (set-file-modes path #o644)
+    (rb-tools-write-file path "after\n")
+    (should (string= (rb-tools--io-read-file path) "after\n"))))
+
 ;;; Presets ---------------------------------------------------------------
 
 (defun rb-tools--all-active-major-modes ()
@@ -1471,7 +1538,7 @@ EOF
 
 (gptel-make-preset 'store-reader
   :description "Grants read access to the object store."
-  :tools '(:append ("get_json_schema_for_class" "get_object" "find_object"))
+  :tools '(:append ("get_json_schema_for_class" "get_object" "find_objects"))
   :system '(:append "You have access to an object store where we store objects of classes
 like STORY or TASK.
 
@@ -1490,9 +1557,12 @@ JSON schema for its objects.
   :description "Grants write access to the object store."
   :parents '(store-reader)
   :tools '(:append ("insert_object" "update_object"))
-  :system '(:append "Occasionally I will ask you to create an object of some class. When this
-happens, I will explicitly state the object id you should use. If I do
-not supply you with an explicit object id, stop and complain.
+  :system '(:append "Occasionally I will ask you to create an object of some class.
+
+When this happens, I may or may not explicitly state the object id you
+should use. If I do not supply you with an explicit object id, use the
+=find_objects= tool to list all objects of a certain class, determine
+the highest id, increment by one and add a slug which feels adequate.
 
 "))
 

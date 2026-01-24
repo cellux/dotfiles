@@ -3,8 +3,8 @@
 :GPTEL_BACKEND: OpenRouter
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
-:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes replace_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_object WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1152 1738) (2117 2385) (2611 2714) (2862 3703) (4068 4624) (4706 6113) (6180 6660) (6718 7411) (7504 8066) (8129 8807) (9075 9325) (9376 9621) (10187 10601) (10657 11001) (11185 11656) (13883 14432) (14580 14855) (14937 15147) (15248 15835) (15930 16323) (16451 16605) (16831 17211) (17299 17493) (17697 18211) (18562 18771) (18979 19157) (19297 19538) (19601 19739) (20033 20910) (20978 21430) (21481 21924) (22322 25468) (25811 28023) (28266 29150) (29214 29721) (29759 30839) (30893 31855) (31894 32867) (33033 33917) (34375 36113)))
+:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes replace_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
+:GPTEL_BOUNDS: ((response (1167 1753) (2132 2400) (2626 2729) (2877 3718) (4083 4639) (4721 6128) (6195 6675) (6733 7426) (7519 8081) (8144 8822) (9090 9340) (9391 9636) (10202 10616) (10672 11016) (11200 11671) (13899 14448) (14596 14871) (14953 15163) (15264 15851) (15946 16339) (16467 16621) (16847 17227) (17315 17509) (17713 18227) (18580 18790) (18998 19177) (19317 19559) (19622 19761) (20056 20934) (21002 21454) (21505 21949) (22357 25506) (25849 28061) (28304 29188) (29266 29773) (29825 30905) (30959 31921) (31973 32949) (33115 33999) (34457 36195) (36253 37273)))
 :END:
 
 * RB's dot files
@@ -237,7 +237,7 @@ an *object store*:
 - insert_object: adds a new object
 - update_object: update an existing object
 - get_object: retrieve an object
-- find_object: find objects matching search criteria
+- find_objects: find objects matching search criteria
 
 Every object has the following mandatory properties which are always
 present:
@@ -413,9 +413,9 @@ Note: there’s still duplicated =get_object= def/tool further down in the file;
 
 @rb
 
-*** Implement find_object
+*** Implement find_objects
 
-Could you implement the =find_object= tool?
+Could you implement the =find_objects= tool?
 
 It should take class, id and properties args.
 
@@ -428,27 +428,27 @@ result list.
 
 @ai
 
-Implemented =find_object= with supporting ID listing helper and tool registration. The new tool searches objects by class, optional ID, and property regex filters, returning matching objects as keyword plists.
+Implemented =find_objects= with supporting ID listing helper and tool registration. The new tool searches objects by class, optional ID, and property regex filters, returning matching objects as keyword plists.
 
 @rb Could you change the implementation such that it calls out to the =rg= command line tool (ripgrep) instead of loading each property value into an Emacs buffer and do the regex parsing via Elisp?
 
 
 @ai
 
-Done. =find_object= now shells out to ripgrep, filtering property files via =--glob= and extracting matching object IDs from the rg output without opening files in Emacs buffers.
+Done. =find_objects= now shells out to ripgrep, filtering property files via =--glob= and extracting matching object IDs from the rg output without opening files in Emacs buffers.
 
 @rb Could you change the implementation such that it finds only objects where all search criteria are satisfied? (change OR to AND)
 
 @ai
 
-Updated =find_object= to enforce AND semantics: it now starts from candidate IDs (optionally narrowed by =id=), then iteratively intersects matches per property regex using ripgrep. Only objects satisfying every provided filter are returned.
+Updated =find_objects= to enforce AND semantics: it now starts from candidate IDs (optionally narrowed by =id=), then iteratively intersects matches per property regex using ripgrep. Only objects satisfying every provided filter are returned.
 
 @rb Now change the impl such that id is also a regex.
 
 
 @ai
 
-Updated =find_object= so =id= is treated as a regex filter (via ripgrep on the =id= file) while preserving AND semantics for all criteria.
+Updated =find_objects= so =id= is treated as a regex filter (via ripgrep on the =id= file) while preserving AND semantics for all criteria.
 
 @rb
 
@@ -458,7 +458,7 @@ Updated =find_object= so =id= is treated as a regex filter (via ripgrep on the =
 
 Could you invent a test suite with good coverage of the functionality
 and execute it by invoking the insert_object / update_object /
-get_object / find_object tools?
+get_object / find_objects tools?
 
 
 @ai
@@ -479,7 +479,7 @@ Ran a basic CRUD smoke:
 - update_object STORY S-001 description → returned plist with class/id/description/name scrambled
 
 5) Find:
-- find_object TASK id regex T-00[12] → returned two matches but with fields scrambled (class/id/description/name misassigned)
+- find_objects TASK id regex T-00[12] → returned two matches but with fields scrambled (class/id/description/name misassigned)
 
 Conclusion: Inserts seem to persist, but get/update/find are mapping properties incorrectly (class/id/prop order), and bare get returns nil. Likely key/value pairing or plist order bug in rb-tools object store helpers.
 
@@ -507,11 +507,13 @@ Retested CRUD and previous failure modes—everything looks good:
 - Inserts: S-101, S-102, T-201, T-202, T-203 succeed.
 - =get_object= returns full, correctly paired plists (no missing or scrambled fields).
 - =update_object= writes back and =get_object= reflects the updated value.
-- =find_object= matches by id regex and returns correctly ordered plists.
+- =find_objects= matches by id regex and returns correctly ordered plists.
 
 The earlier property pairing/scrambling is resolved.
 
 ** Refactor code to increase testability
+
+*** Plan
 
 @rb @plan In =rb-tools.el= We already have some tests, but not
 enough. Also the structure of the code does not support testability as
@@ -526,12 +528,12 @@ Could you analyze the function of =rb-tools.el= and come up with a plan which wo
 
 Here’s a grounded, testability-first plan after scanning =rb-tools.el=:
 
-*** What’s there now
+**** What’s there now
 - A single large file mixes core logic, IO, and GPTel tool registration.
 - Only a handful of =ert= tests cover JSON schema validation; everything else (Tree-sitter helpers, object store, fs/process wrappers) is untested.
 - Side effects (filesystem, external tools, GPTel bindings) are intertwined, making unit tests hard.
 
-*** Refactor plan (functional core, imperative shell)
+**** Refactor plan (functional core, imperative shell)
 1) *Module boundaries (even if kept in one file initially):*
    - =core/utils=: truthiness, JSON key normalization, schema helpers, validation.
    - =core/ts=: parse/validate nodes, language lookup, pure validation functions.
@@ -558,7 +560,7 @@ Here’s a grounded, testability-first plan after scanning =rb-tools.el=:
 5) *Execution/documentation:*
    - Add a brief “Running tests” note (e.g., =(ert t)=/=ert-run-tests-batch-and-exit=) and expected dependencies (Tree-sitter grammars available).
 
-*** Scope control (to keep this feasible)
+**** Scope control (to keep this feasible)
 - Don’t overreach into Clojure eval or actual GPT calls; keep those untested or covered only by thin delegation tests.
 - Keep refactor incremental: introduce injection points and helper macros first, then add tests per area.
 - If splitting files is too invasive, retain a single file but clearly separate sections and ensure cores are pure and callable without GPTel.
@@ -637,6 +639,8 @@ Inserted the story and tasks:
 
 About naming rules: your format is clear when stated explicitly: STORY IDs look like STORY-<number>-<slug>, and tasks under that story like TASK-<number>-<sequence>-<slug> where <number> matches the story’s number and <sequence> is an integer order. If you want it more explicit in context, we could add a short conventions note somewhere (not in project.org).
 
+*** TASK-2-1
+
 @rb @code Now implement TASK-2-1-harness-and-structure
 
 
@@ -650,6 +654,8 @@ Applied TASK-2-1-harness-and-structure updates:
 - Left the “Running tests” note for you to transplant as requested.
 
 No functional changes to tools themselves yet—just scaffolding for future testable work.
+
+*** TASK-2-2
 
 @rb @code Implement TASK-2-2
 
@@ -672,7 +678,9 @@ Notes:
 
 If you’d like, I can add a small smoke test proving IO injection works (using the temp macros) before moving to the next task.
 
-@rb @code No need, just proceed to TASK-2-3.
+*** TASK-2-3
+
+@rb @code Proceed to TASK-2-3.
 
 
 @ai
@@ -693,14 +701,16 @@ Files touched
 Next
 - Proceed to TASK-2-4 and add tests around the pure range helpers (and tree-sitter helpers per that task), leveraging the existing temp dir/file macros.
 
-@rb @code Proceed to TASK-2-4
+*** TASK-2-4
+
+@rb @code Implement TASK-2-4
 
 
 @ai
 
 Implemented TASK-2-4-treesitter-tests with a testability-focused refactor:
 
-*** What I changed
+**** What I changed
 - *Split pure Tree-sitter formatting/selection helpers* out of the IO layer:
   - =rb-tools--ts-collect-root-children=
   - =rb-tools--ts-format-list-nodes=
@@ -714,10 +724,10 @@ Implemented TASK-2-4-treesitter-tests with a testability-focused refactor:
   - end-to-end pure list/get via a mock root node (no Treesitter/IO required)
 - Cleaned up a duplicated/stray block that lingered after refactor.
 
-*** Files touched
+**** Files touched
 - =rb-tools.el=
 
-*** Notes
+**** Notes
 - No runtime behavior changes for callers; defaults remain.
 - The pure helpers make it straightforward to test formatting/selection without invoking Tree-sitter or touching disk.
 
@@ -774,5 +784,29 @@ Here’s a concise set of tool tweaks that would make non–Tree-sitter edits fa
    - A tool to “insert_after_node(path, node_hash_or_line, text)” or “replace_node_text(path, node_hash_or_line, new_text)”. Even when we can’t use a full update-nodes flow, anchoring on a node hash or start line avoids clobbering the wrong form.
 
 These changes give us safer anchoring (regex/markers), context checks, and structured nodes—reducing reliance on brittle absolute line ranges and preventing the kind of accidental embedding you saw.
+
+@rb
+
+*** TASK-2-5
+
+@rb @code Implement TASK-2-5
+
+
+@ai
+
+I added ERT coverage for TASK-2-5:
+
+- New tests for line/range logic:
+  - =rb-tools--validate-line-range-specs/sorts-descending= ensures ranges are sorted descending by start.
+  - =rb-tools--apply-line-range-updates/basic= covers a simple in-buffer replacement.
+  - =rb-tools--apply-line-range-updates/overlapping-order= ensures descending application produces expected output.
+  - =rb-tools--validate-line-range-specs/errors= exercises out-of-range, start> end, and missing =new_text= errors.
+
+- New tests for imperative wrappers:
+  - =rb-tools-replace-line-ranges/writes-file= checks file rewrite behavior.
+  - =rb-tools-read-file/with-and-without-line-numbers= checks both modes.
+  - =rb-tools-write-file/basic-and-read-only= checks successful write and failure on read-only file.
+
+I attempted a batch test run with =emacs -Q -l ert -l rb-tools.el -f ert-run-tests-batch-and-exit=; it failed because =gptel-make-tool= isn’t available in minimal Emacs. In your full environment with gptel loaded, the suite should run.
 
 @rb
