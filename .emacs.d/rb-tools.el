@@ -498,28 +498,98 @@ On success, returns the list of updated nodes (or the dry-run report):
  :confirm t
  :include t)
 
-(defun rb-tools-replace-line-ranges (path ranges)
-  "Replace the specified line RANGES in PATH with new content.
+(defun rb-tools-get-line-ranges (path ranges)
+  "Return the exact text for each line range in RANGES from PATH.
+
+RANGES is a list of plists with :start and :end (1-based, inclusive).
+Returns a list of plists (:start :end :text :text_hash) in normalized
+order (sorted descending by :start)."
+  (unless (file-readable-p path)
+    (error "File is not readable: %s" path))
+  (with-temp-buffer
+    (insert-file-contents path)
+    (let* ((total-lines (line-number-at-pos (point-max)))
+           (normalized (rb-tools--normalize-line-range-specs ranges total-lines nil nil))
+           (result '()))
+      (dolist (spec normalized)
+        (let* ((start (plist-get spec :start))
+               (end (plist-get spec :end))
+               (text (rb-tools--line-range-slice start end)))
+          (push (list :start start
+                      :end end
+                      :text text
+                      :text_hash (secure-hash 'md5 text))
+                result)))
+      (nreverse result))))
+
+(gptel-make-tool
+ :name "get_line_ranges"
+ :category "rb"
+ :description (documentation 'rb-tools-get-line-ranges)
+ :function #'rb-tools-get-line-ranges
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "ranges"
+     :type array
+     :items ( :type object
+              :properties ( :start (:type integer)
+                            :end (:type integer)))
+     :description "List of line ranges to retrieve (1-based, inclusive)."))
+ :include t)
+
+(defun rb-tools-update-line-ranges (path ranges)
+  "Update the specified line RANGES in PATH with verification.
 
 Each element of RANGES contains the following fields:
 
-- start: integer - line number of range start
-- end: integer - line number of range end
-- end_inclusive: boolean - is END included in the range?
-- new_text: string - replacement text"
+- :start integer (1-based inclusive)
+- :end integer (1-based inclusive)
+- :new_text string (replacement text)
+- optional :text_hash string (MD5 of existing slice)
+- optional :old_text string (expected existing slice)
+
+At least one of :text_hash or :old_text must be provided.  All ranges
+are validated, sorted descending by :start, verified against the current
+file contents, and applied in-memory.  The file is written only after
+all checks pass.  Returns a list of plists (:start :end :updated t) in
+normalized order."
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
   (unless (file-writable-p path)
     (error "File is not writable: %s" path))
-  (let* ((content (rb-tools--io-read-file path))
-         (updated (rb-tools--apply-line-range-updates content ranges)))
-    (rb-tools--io-write-file path updated)))
+  (with-temp-buffer
+    (insert-file-contents path)
+    (let* ((total-lines (line-number-at-pos (point-max)))
+           (normalized (rb-tools--normalize-line-range-specs ranges total-lines t t))
+           (result '()))
+      (dolist (spec normalized)
+        (let* ((start (plist-get spec :start))
+               (end (plist-get spec :end))
+               (new-text (plist-get spec :new_text))
+               (expected-hash (plist-get spec :text_hash))
+               (old-text-provided (plist-member spec :old_text))
+               (expected-old (plist-get spec :old_text))
+               (existing (rb-tools--line-range-slice start end))
+               (existing-hash (secure-hash 'md5 existing)))
+          (when (and old-text-provided (not (string= existing expected-old)))
+            (error "Existing text mismatch for range %s-%s" start end))
+          (when (and expected-hash (not (string= existing-hash expected-hash)))
+            (error "Hash mismatch for range %s-%s" start end))
+          (pcase-let ((`(,start-pos . ,end-pos) (rb-tools--line-range-boundaries start end)))
+            (goto-char start-pos)
+            (delete-region start-pos end-pos)
+            (insert new-text))
+          (push (list :start start :end end :updated t) result)))
+      (rb-tools--io-write-file path (buffer-string))
+      (nreverse result))))
 
 (gptel-make-tool
- :name "replace_line_ranges"
+ :name "update_line_ranges"
  :category "rb"
- :description (documentation 'rb-tools-replace-line-ranges)
- :function #'rb-tools-replace-line-ranges
+ :description (documentation 'rb-tools-update-line-ranges)
+ :function #'rb-tools-update-line-ranges
  :args
  '(( :name "path"
      :type string
@@ -529,9 +599,10 @@ Each element of RANGES contains the following fields:
      :items ( :type object
               :properties ( :start (:type integer)
                             :end (:type integer)
-                            :end_inclusive (:type boolean)
-                            :new_text (:type string)))
-     :description "List of line ranges to replace."))
+                            :new_text (:type string)
+                            :text_hash (:type string :optional t)
+                            :old_text (:type string :optional t)))
+     :description "List of line ranges to replace with verification. Either text_hash or old_text must be provided."))
  :confirm t)
 
 (defun rb-tools-read-file (path &optional with-line-numbers)
@@ -691,22 +762,46 @@ Hidden directories are searched by default except the .git folder."
      :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
  :include t)
 
-;;; Pure core utilities (validation, normalization) -----------------------
+;;; Line range tools API ---------------------------------
 
-(defun rb-tools--validate-line-range-specs (ranges total-lines)
-  "Return normalized RANGES sorted descending by start.
-TOTAL-LINES is the number of lines in the target content.
-Signals an error for malformed specs or out-of-bounds ranges."
-  (let ((updates (sort (seq-into ranges 'list)
-                       (lambda (a b)
-                         (> (plist-get a :start)
-                            (plist-get b :start))))))
-    (dolist (spec updates)
-      (let ((start (plist-get spec :start))
-            (end (plist-get spec :end))
-            (new-text (plist-get spec :new_text)))
-        (unless (stringp new-text)
-          (error "Missing new_text for range starting at %s" start))
+(defun rb-tools--line-range-boundaries (start end)
+  "Return (START-POS . END-POS) for line range START..END in current buffer.
+START/END are 1-based, inclusive and must already be validated.  END-POS
+points to the beginning of the line after END (or `point-max' when END
+is the last line)."
+  (save-excursion
+    (goto-char (point-min))
+    (forward-line (1- start))
+    (let ((start-pos (point)))
+      (goto-char (point-min))
+      (forward-line end)
+      (cons start-pos (point)))))
+
+(defun rb-tools--line-range-slice (start end)
+  "Return the exact buffer substring for inclusive lines START..END."
+  (pcase-let ((`(,start-pos . ,end-pos) (rb-tools--line-range-boundaries start end)))
+    (buffer-substring-no-properties start-pos end-pos)))
+
+(defun rb-tools--normalize-line-range-specs (ranges total-lines require-new-text require-verification)
+  "Validate and normalize line range RANGES for a file with TOTAL-LINES.
+Returns the specs sorted descending by :start.  Signals an error on invalid
+input (out-of-bounds, overlaps, missing fields).
+
+When REQUIRE-NEW-TEXT is non-nil, each spec must contain a string :new_text.
+When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash or
+:old_text (or both)."
+  (let* ((specs (seq-sort (lambda (a b)
+                            (> (plist-get a :start)
+                               (plist-get b :start)))
+                          (seq-into ranges 'list)))
+         (prev-start nil)
+         (prev-end nil))
+    (dolist (spec specs)
+      (let* ((start (plist-get spec :start))
+             (end (plist-get spec :end))
+             (new-text (plist-get spec :new_text))
+             (text-hash (plist-get spec :text_hash))
+             (old-text (plist-get spec :old_text)))
         (unless (and (integerp start) (>= start 1))
           (error "Invalid start line: %s" start))
         (unless (and (integerp end) (>= end 1))
@@ -716,37 +811,24 @@ Signals an error for malformed specs or out-of-bounds ranges."
         (when (> end total-lines)
           (error "End line %s beyond end of file (%s)" end total-lines))
         (when (> start end)
-          (error "Start line %s after end line %s" start end))))
-    updates))
+          (error "Start line %s after end line %s" start end))
+        (when (and require-new-text (not (stringp new-text)))
+          (error "Missing new_text for range starting at %s" start))
+        (when (and require-verification
+                   (not (or (plist-member spec :text_hash)
+                            (plist-member spec :old_text))))
+          (error "Missing verification for range starting at %s" start))
+        (when (and (plist-member spec :text_hash) (not (stringp text-hash)))
+          (error "Invalid text_hash for range starting at %s" start))
+        (when (and (plist-member spec :old_text) (not (stringp old-text)))
+          (error "Invalid old_text for range starting at %s" start))
+        (when (and prev-start (>= end prev-start))
+          (error "Overlapping ranges %s-%s and %s-%s" start end prev-start prev-end))
+        (setq prev-start start
+              prev-end end)))
+    specs))
 
-(defun rb-tools--apply-line-range-updates (content ranges)
-  "Apply replacement specs in RANGES to CONTENT and return the updated string.
-RANGES follows `rb-tools-replace-line-ranges' shape.  This function is
-pure and performs no filesystem side effects."
-  (with-temp-buffer
-    (insert content)
-    (let* ((total-lines (line-number-at-pos (point-max)))
-           (updates (rb-tools--validate-line-range-specs ranges total-lines)))
-      (dolist (spec updates)
-        (let* ((start (plist-get spec :start))
-               (end (plist-get spec :end))
-               (end-inc (rb-tools--truthy? (plist-get spec :end_inclusive)))
-               (new-text (plist-get spec :new_text))
-               start-pos end-pos)
-          (save-excursion
-            (goto-char (point-min))
-            (forward-line (1- start))
-            (setq start-pos (point)))
-          (save-excursion
-            (goto-char (point-min))
-            (forward-line (1- end))
-            (when end-inc
-              (forward-line 1))
-            (setq end-pos (point)))
-          (goto-char start-pos)
-          (delete-region start-pos end-pos)
-          (insert new-text))))
-    (buffer-string)))
+;;; JSON schema for classes -----------------------
 
 (defvar rb-tools--json-value-missing
   (make-symbol "rb-tools--json-value-missing")
@@ -1393,62 +1475,107 @@ Cleans up the directory afterwards."
   ;; Non-integer line
   (should-error (rb-tools--ts-select-nodes-by-line '() '("x"))))
 
-(ert-deftest rb-tools--validate-line-range-specs/sorts-descending ()
-  (let* ((ranges (list (list :start 1 :end 1 :end_inclusive t :new_text "a")
-                       (list :start 3 :end 3 :end_inclusive t :new_text "c")
-                       (list :start 2 :end 2 :end_inclusive t :new_text "b")))
-         (sorted (rb-tools--validate-line-range-specs ranges 3)))
-    (should (equal (mapcar (lambda (r) (plist-get r :start)) sorted)
-                   '(3 2 1)))))
+(ert-deftest rb-tools-get-line-ranges/basic ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "l1\nl2\nl3\n")
+    (let* ((ranges (list (list :start 3 :end 3)
+                         (list :start 1 :end 2)))
+           (result (rb-tools-get-line-ranges path ranges)))
+      (should (equal (mapcar (lambda (r) (plist-get r :start)) result)
+                     '(3 1)))
+      (should (string= (plist-get (nth 0 result) :text) "l3\n"))
+      (should (string= (plist-get (nth 1 result) :text) "l1\nl2\n"))
+      (should (string= (plist-get (nth 0 result) :text_hash)
+                       (secure-hash 'md5 "l3\n"))))))
 
-(ert-deftest rb-tools--apply-line-range-updates/basic ()
-  (let* ((content "l1\nl2\nl3\n")
-         (ranges (list (list :start 2 :end 2 :end_inclusive t :new_text "X\n")))
-         (result (rb-tools--apply-line-range-updates content ranges)))
-    (should (string= result "l1\nX\nl3\n"))))
-
-(ert-deftest rb-tools--apply-line-range-updates/overlapping-order ()
-  (let* ((content "l1\nl2\nl3\nl4\n")
-         (ranges (list (list :start 2 :end 3 :end_inclusive t :new_text "X\n")
-                       (list :start 1 :end 1 :end_inclusive t :new_text "A\n")))
-         (result (rb-tools--apply-line-range-updates content ranges)))
-    (should (string= result "A\nX\nl4\n"))))
-
-(ert-deftest rb-tools-replace-line-ranges/writes-file ()
+(ert-deftest rb-tools-update-line-ranges/sorts-and-hash-ok ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "a\nb\nc\n")
-    (let ((ranges (list (list :start 2 :end 2 :end_inclusive t :new_text "B\n")
-                        (list :start 1 :end 1 :end_inclusive t :new_text "A\n"))))
-      (rb-tools-replace-line-ranges path ranges)
-      (should (string= (rb-tools--io-read-file path) "A\nB\nc\n")))))
+    (let* ((hash-a (secure-hash 'md5 "a\n"))
+           (hash-c (secure-hash 'md5 "c\n"))
+           ;; Intentionally unsorted input; should be applied in descending order.
+           (ranges (list (list :start 1 :end 1 :new_text "A\n" :text_hash hash-a)
+                         (list :start 3 :end 3 :new_text "C\n" :text_hash hash-c))))
+      (should (equal (rb-tools-update-line-ranges path ranges)
+                     '((:start 3 :end 3 :updated t)
+                       (:start 1 :end 1 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "A\nb\nC\n")))))
 
-(ert-deftest rb-tools--validate-line-range-specs/errors ()
-  ;; start beyond file
-  (should-error (rb-tools--apply-line-range-updates "one" (list (list :start 2 :end 2 :end_inclusive t :new_text "x"))))
-  ;; end beyond file
-  (should-error (rb-tools--apply-line-range-updates "one" (list (list :start 1 :end 2 :end_inclusive t :new_text "x"))))
-  ;; start after end
-  (should-error (rb-tools--apply-line-range-updates "one\n" (list (list :start 2 :end 1 :end_inclusive t :new_text "x"))))
-  ;; missing new_text
-  (should-error (rb-tools--apply-line-range-updates "one\n" (list (list :start 1 :end 1 :end_inclusive t)))))
-
-(ert-deftest rb-tools-read-file/with-and-without-line-numbers ()
+(ert-deftest rb-tools-update-line-ranges/old-text-ok ()
   (rb-tools--with-temp-file path
-    (rb-tools--io-write-file path "a\nb\n")
-    (should (string= (rb-tools-read-file path) "a\nb\n"))
-    (should (string= (rb-tools-read-file path t) "1:a\n2:b\n"))))
+    (rb-tools--io-write-file path "x\ny\n")
+    (let* ((ranges (list (list :start 1 :end 1 :new_text "X\n" :old_text "x\n"))))
+      (should (equal (rb-tools-update-line-ranges path ranges)
+                     '((:start 1 :end 1 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "X\ny\n")))))
 
-(ert-deftest rb-tools-write-file/basic-and-read-only ()
+(ert-deftest rb-tools-update-line-ranges/both-verifications-ok ()
   (rb-tools--with-temp-file path
-    ;; happy path
-    (rb-tools-write-file path "ok\n")
-    (should (string= (rb-tools--io-read-file path) "ok\n"))
-    ;; make file read-only and expect failure
-    (set-file-modes path #o444)
-    (should-error (rb-tools-write-file path "fail") :type 'error)
-    (set-file-modes path #o644)
-    (rb-tools-write-file path "after\n")
-    (should (string= (rb-tools--io-read-file path) "after\n"))))
+    (rb-tools--io-write-file path "p\nq\n")
+    (let* ((hash-p (secure-hash 'md5 "p\n"))
+           (ranges (list (list :start 1 :end 1 :new_text "P\n" :old_text "p\n" :text_hash hash-p))))
+      (should (equal (rb-tools-update-line-ranges path ranges)
+                     '((:start 1 :end 1 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "P\nq\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/hash-mismatch ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "u\nv\n")
+    (let* ((ranges (list (list :start 2 :end 2 :new_text "V\n" :text_hash "deadbeef"))))
+      (should-error (rb-tools-update-line-ranges path ranges))
+      (should (string= (rb-tools--io-read-file path) "u\nv\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/old-text-mismatch ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "p\nq\n")
+    (let* ((ranges (list (list :start 1 :end 1 :new_text "P\n" :old_text "xxx"))))
+      (should-error (rb-tools-update-line-ranges path ranges))
+      (should (string= (rb-tools--io-read-file path) "p\nq\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/missing-verification ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "m\nn\n")
+    (let* ((ranges (list (list :start 1 :end 1 :new_text "M\n"))))
+      (should-error (rb-tools-update-line-ranges path ranges))
+      (should (string= (rb-tools--io-read-file path) "m\nn\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/overlap-and-bounds ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "a\nb\nc\n")
+    ;; Overlapping ranges rejected
+    (should-error (rb-tools-update-line-ranges path (list (list :start 3 :end 3 :new_text "Z\n" :old_text "c\n")
+                                                          (list :start 2 :end 3 :new_text "Y\n" :old_text "b\nc\n"))))
+    ;; Out-of-bounds rejected
+    (should-error (rb-tools-update-line-ranges path (list (list :start 5 :end 5 :new_text "oops" :old_text ""))))
+    (should (string= (rb-tools--io-read-file path) "a\nb\nc\n"))))
+
+(ert-deftest rb-tools-update-line-ranges/all-or-nothing ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "one\ntwo\nthree\n")
+    (let* ((ranges (list (list :start 2 :end 2 :new_text "TWO\n" :old_text "two\n")
+                         (list :start 1 :end 1 :new_text "ONE\n" :text_hash "bad"))))
+      (should-error (rb-tools-update-line-ranges path ranges))
+      (should (string= (rb-tools--io-read-file path) "one\ntwo\nthree\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/empty-new-text ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "keep\nremove\n")
+    (let* ((ranges (list (list :start 2 :end 2 :new_text "" :old_text "remove\n"))))
+      (should (equal (rb-tools-update-line-ranges path ranges)
+                     '((:start 2 :end 2 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "keep\n")))))
+
+(ert-deftest rb-tools-update-line-ranges/multi-range-mixed-verification ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path "l1\nl2\nl3\n")
+    (let* ((hash-l3 (secure-hash 'md5 "l3\n"))
+           (ranges (list (list :start 3 :end 3 :new_text "L3\n" :text_hash hash-l3)
+                         (list :start 1 :end 1 :new_text "L1\n" :old_text "l1\n"))))
+      (should (equal (rb-tools-update-line-ranges path ranges)
+                     '((:start 3 :end 3 :updated t)
+                       (:start 1 :end 1 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "L1\nl2\nL3\n")))))
+
 
 ;;; Presets ---------------------------------------------------------------
 
@@ -1504,37 +1631,20 @@ _Development guidelines_
 
 (gptel-make-preset 'repo-reader
   :description "Grants read access to all files in the Git repository."
-  :tools '(:append ("rg" "fd" "read_file"))
+  :tools '(:append ("rg" "fd" "read_file" "get_line_ranges"))
   :system '(:append "To explore the repository, use the following tools:
 
 - =fd= for getting a recursive listing of all files in the project
 - =rg= for finding files with lines matching a certain regex
-- =read_file= to slurp an entire file into the context
+- =read_file= to slurp an entire file into context
+- =get_line_ranges= to load parts of a file into context
 
 "))
 
 (gptel-make-preset 'repo-editor
   :description "Grants write access to all files in the Git repository."
   :parents '(repo-reader)
-  :tools '(:append ("replace_line_ranges" "write_file"))
-  :system '(:append "_Guidelines on changing files_
-
-*If you want to add new content to the top of a file:*
-
-Use =replace_line_ranges= with =start= and =end= both set to 1 and
-=end_inclusive= set to false
-
-*If you want to append new content to a file:*
-
-Do something like this via bash:
-
-```
-cat <<EOF >>FILENAME
-enter the content to append here
-EOF
-```
-
-"))
+  :tools '(:append ("write_file" "update_line_ranges")))
 
 (gptel-make-preset 'store-reader
   :description "Grants read access to the object store."
@@ -1568,7 +1678,7 @@ the highest id, increment by one and add a slug which feels adequate.
 
 (gptel-make-preset 'code-reader
   :description "Grants read access to source code files."
-  :tools '(:append ("tree_sitter_list_nodes" "tree_sitter_get_nodes" "read_file"))
+  :tools '(:append ("tree_sitter_list_nodes" "tree_sitter_get_nodes" "read_file" "get_line_ranges"))
   :system '(:append "_Guidelines on analyzing source code files_
 
 *If you want to analyze a source code file, use the following tools:*
@@ -1581,7 +1691,9 @@ the highest id, increment by one and add a slug which feels adequate.
    translates them to the complete text of the AST nodes which start on
    those lines
 
-3. read_file: Slurps the whole file into the context, with optional line
+3. get_line_ranges: Loads line ranges of a file into the context.
+
+4. read_file: Slurps the whole file into the context, with optional line
    numbers. Use this as a last resort as it may consume a lot of
    context.
 
@@ -1590,7 +1702,7 @@ the highest id, increment by one and add a slug which feels adequate.
 (gptel-make-preset 'code-editor
   :description "Grants write access to source code files."
   :parents '(code-reader)
-  :tools '(:append ("tree_sitter_update_nodes" "replace_line_ranges" "write_file"))
+  :tools '(:append ("tree_sitter_update_nodes" "write_file" "update_line_ranges"))
   :system '(:append "_Guidelines on changing source code files_
 
 *If you want to change something in a source code file:*
@@ -1600,15 +1712,6 @@ the highest id, increment by one and add a slug which feels adequate.
 
 2. Use =tree_sitter_update_nodes= to update the desired AST nodes.
 
-*If you want to add new AST nodes to the middle of a source code file:*
-
-1. Use =tree_sitter_list_nodes= to get an overview of the top-level AST nodes.
-
-2. Determine the best location for the insert.
-
-3. Use =replace_line_ranges= with =start= and =end= both set to the
-   point of insertion, and =end_inclusive= set to false: this will
-   insert the content before the =start= line
 "))
 
 (gptel-make-preset 'plan

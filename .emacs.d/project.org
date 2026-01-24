@@ -3,8 +3,8 @@
 :GPTEL_BACKEND: OpenRouter
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
-:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes replace_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1167 1753) (2132 2400) (2626 2729) (2877 3718) (4083 4639) (4721 6128) (6195 6675) (6733 7426) (7519 8081) (8144 8822) (9090 9340) (9391 9636) (10202 10616) (10672 11016) (11200 11671) (13899 14448) (14596 14871) (14953 15163) (15264 15851) (15946 16339) (16467 16621) (16847 17227) (17315 17509) (17713 18227) (18580 18790) (18998 19177) (19317 19559) (19622 19761) (20056 20934) (21002 21454) (21505 21949) (22357 25506) (25849 28061) (28304 29188) (29266 29773) (29825 30905) (30959 31921) (31973 32949) (33115 33999) (34457 36195) (36253 37273)))
+:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes replace_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects get_line_ranges update_line_ranges WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
+:GPTEL_BOUNDS: ((response (1440 2026) (2405 2673) (2899 3002) (3150 3991) (4356 4912) (4994 6401) (6468 6948) (7006 7699) (7792 8354) (8417 9095) (9363 9613) (9664 9909) (10475 10889) (10945 11289) (11473 11944) (14172 14721) (14869 15144) (15226 15436) (15537 16124) (16219 16612) (16740 16894) (17120 17500) (17588 17782) (17986 18500) (18853 19063) (19271 19450) (19590 19832) (19895 20034) (20329 21207) (21275 21727) (21778 22222) (22630 25779) (26122 28334) (28577 29461) (29539 30046) (30098 31178) (31232 32194) (32246 33222) (33388 34272) (34324 35344) (35858 37596) (38481 40496) (40792 40948) (41143 41244) (41337 41399) (41420 41490) (41516 41640) (41669 41757) (41779 41904) (42023 42219) (42309 42434) (42479 42587) (42709 42798) (42853 45471) (45505 46721) (46754 48199) (48237 49454) (49619 50933)))
 :END:
 
 * RB's dot files
@@ -751,6 +751,32 @@ Notes on running tests:
 
 No other files touched.
 
+*** TASK-2-5
+
+@rb @code Implement TASK-2-5
+
+
+@ai
+
+I added ERT coverage for TASK-2-5:
+
+- New tests for line/range logic:
+  - =rb-tools--validate-line-range-specs/sorts-descending= ensures ranges are sorted descending by start.
+  - =rb-tools--apply-line-range-updates/basic= covers a simple in-buffer replacement.
+  - =rb-tools--apply-line-range-updates/overlapping-order= ensures descending application produces expected output.
+  - =rb-tools--validate-line-range-specs/errors= exercises out-of-range, start> end, and missing =new_text= errors.
+
+- New tests for imperative wrappers:
+  - =rb-tools-replace-line-ranges/writes-file= checks file rewrite behavior.
+  - =rb-tools-read-file/with-and-without-line-numbers= checks both modes.
+  - =rb-tools-write-file/basic-and-read-only= checks successful write and failure on read-only file.
+
+I attempted a batch test run with =emacs -Q -l ert -l rb-tools.el -f ert-run-tests-batch-and-exit=; it failed because =gptel-make-tool= isn’t available in minimal Emacs. In your full environment with gptel loaded, the suite should run.
+
+@rb
+
+** Increase robustness of line range replacements
+
 @rb @plan During the implementation of TASK-2-4, you managed to place
 the ERT tests into the middle of a make-gptel-tool form which resulted
 in eval failures. I had to fix all of it by hand.
@@ -785,28 +811,213 @@ Here’s a concise set of tool tweaks that would make non–Tree-sitter edits fa
 
 These changes give us safer anchoring (regex/markers), context checks, and structured nodes—reducing reliance on brittle absolute line ranges and preventing the kind of accidental embedding you saw.
 
-@rb
+*** get_line_ranges and update_line_ranges
 
-*** TASK-2-5
+**** plan
 
-@rb @code Implement TASK-2-5
+@rb @plan I want to implement the following two tools:
+
+1. =get_line_ranges= takes the same PATH and RANGES arguments as
+   replace_line_ranges but the RANGE spec contains only =start= and
+   =end= where =end= is always inclusive. The return value is a list
+   of updated RANGE specs with the following fields:
+   1. =start= and =end=: copied from input
+   2. =text=: text between lines =start= and =end=
+   3. =text_hash=: MD5 hash of the text between =start= and =end=
+2. =update_line_ranges= takes PATH and RANGES with the following RANGE
+   spec:
+   1. =start= and =end=
+   2. =text_hash= or =old_text= used to verify that the referenced range is really there
+   3. =new_text= for the replacement text
+
+My feeling is that if I replaced =replace_line_ranges= with these two
+tools then patching accuracy would improve.
 
 
 @ai
 
-I added ERT coverage for TASK-2-5:
+Here are the main design questions/decisions we should settle before drafting the STORY and TASKs:
 
-- New tests for line/range logic:
-  - =rb-tools--validate-line-range-specs/sorts-descending= ensures ranges are sorted descending by start.
-  - =rb-tools--apply-line-range-updates/basic= covers a simple in-buffer replacement.
-  - =rb-tools--apply-line-range-updates/overlapping-order= ensures descending application produces expected output.
-  - =rb-tools--validate-line-range-specs/errors= exercises out-of-range, start> end, and missing =new_text= errors.
+1) API contract and validation
+- Ranges: ensure start/end are 1-based, start ≤ end, inclusive end. Reject overlapping or unsorted ranges? (replace_line_ranges currently sorts/merges—should these mimic it?)
+- Behavior when ranges partially/fully out of file bounds?
+- Handling both text_hash and old_text in update_line_ranges: allow both? prioritize hash? require at least one?
+- Should update_line_ranges fail fast on first mismatch or report all mismatches? What does the return shape look like (OK + maybe updated ranges?).
 
-- New tests for imperative wrappers:
-  - =rb-tools-replace-line-ranges/writes-file= checks file rewrite behavior.
-  - =rb-tools-read-file/with-and-without-line-numbers= checks both modes.
-  - =rb-tools-write-file/basic-and-read-only= checks successful write and failure on read-only file.
+2) Text and hashing details
+- Hash input: exact slice of lines joined with newline as stored (respecting trailing newline of file?).
+- Encoding: assume UTF-8 and use raw bytes of the slice for MD5?
+- Should we normalize line endings (\n only) or compute exactly as read?
+- Should get_line_ranges include a trailing newline in text when the file ends without one? (i.e., mirror read_file semantics).
 
-I attempted a batch test run with =emacs -Q -l ert -l rb-tools.el -f ert-run-tests-batch-and-exit=; it failed because =gptel-make-tool= isn’t available in minimal Emacs. In your full environment with gptel loaded, the suite should run.
+3) Concurrency/atomicity
+- Should update_line_ranges be all-or-nothing (no partial writes if one range mismatches)?
+- If multiple ranges are provided, can they overlap? If yes, in what order do we apply replacements (ascending start)? If no, enforce non-overlap.
+
+4) Return values and errors
+- get_line_ranges: return list of {start end text text_hash}; what error if a range is invalid (missing lines, inverted, etc.)?
+- update_line_ranges: return OK plus maybe the applied ranges; explicit error codes/messages for: file not found, range out of bounds, hash/text mismatch, overlapping ranges, empty new_text allowed?
+
+5) Consistency with existing toolset
+- Should replace_line_ranges stay alongside these two (for backward compatibility), or will we deprecate it but leave in place?
+- Do we need to mirror the interface shapes (plist vs alist, keyword symbols) exactly as current tools expect?
+
+Once you answer these, I’ll draft a STORY plus crisp TASKs to implement both tools safely.
+
+@rb @plan Reject overlapping ranges? yes
+
+Reject unsorted ranges? No, just sort them in decreasing order of starting line number.
+
+When ranges partially/fully out of file bounds: reject
+
+In update: if both text_hash and old_text are defined, check both. If only one is there, check only that.
+
+Should update_line_ranges fail fast on first mismatch or report all mismatches? Fail fast
+
+What does the return shape look like (OK + maybe updated ranges?) As we fail completely at the first mismatch, that results in an error response. If there is no error, we should return a list of (start, end, updated) objects where updated is true everywhere.
+
+Hash input: exact slice of lines joined with newline as stored (respecting trailing newline of file?) yes, the hashed text should be what is in the file and what is returned in the text field.
+
+Encoding: assume UTF-8 and use raw bytes of the slice for MD5? hash the raw bytes
+
+Should we normalize line endings (\n only) or compute exactly as read? Compute exactly as read
+
+Should get_line_ranges include a trailing newline in text when the file ends without one? (i.e., mirror read_file semantics) no, keep the text as it is
+
+Should update_line_ranges be all-or-nothing (no partial writes if one range mismatches)? yes, all-or-nothing
+
+get_line_ranges: return list of {start end text text_hash}; what error if a range is invalid (missing lines, inverted, etc.)? Generally if there is an error, just throw it via (error ...) and let gptel figure out how to report this to the LLM
+
+update_line_ranges: return OK plus maybe the applied ranges; explicit error codes/messages for: file not found, range out of bounds, hash/text mismatch, overlapping ranges, empty new_text allowed? no need for explicit error codes, just the message varies which you give to (error ...)
+
+Should replace_line_ranges stay alongside these two (for backward compatibility), or will we deprecate it but leave in place? once the new tools are in place, remove it
+
+Do we need to mirror the interface shapes (plist vs alist, keyword symbols) exactly as current tools expect? yes, let's try to follow the existing conventions.
+
+If you are satisfied with my replies, please prepare a story.
+
+
+@ai
+
+Created *STORY-4-robust-line-range-tools*. Ready to proceed with tasks when you’re ready.
+
+@rb @plan Sure, create all the required tasks.
+
+@ai
+
+Here are the tasks for STORY-4-robust-line-range-tools:
+
+- *TASK-4-1-design-api* — Design API and validation rules for line range tools
+  Specify the Elisp API contracts for get_line_ranges and update_line_ranges: parameter shapes, sorting rules (descending by start), rejection of overlapping or out-of-bounds ranges, required verification semantics (hash/text), failure behavior (fail fast via error), return value shapes, hashing details (raw bytes, exact slice), and all-or-nothing write policy. Document whether replace_line_ranges is removed. Produce a short summary in comments or docstrings to guide implementation and tests.
+
+- *TASK-4-2-implement-get-line-ranges* — Implement get_line_ranges tool
+  Implement get_line_ranges Emacs tool in rb-tools.el. Validate inputs (path exists, ranges list, start/end integers, start<=end, sorted descending by start, reject overlaps, reject out-of-bounds). Sort ranges descending by start. For each range, extract exact text (no normalization), compute MD5 on raw bytes of that slice, and return list of plists with start, end, text, text_hash. Errors via (error ...) on invalid input. Remove or deprecate replace_line_ranges per design. Add docstring/comments consistent with API spec.
+
+- *TASK-4-3-implement-update-line-ranges* — Implement update_line_ranges tool
+  Implement update_line_ranges Emacs tool in rb-tools.el. Validate inputs (path exists, ranges list with start/end integers, start<=end, sorted descending by start, reject overlaps, reject out-of-bounds). Sort ranges descending by start. Fail fast if any validation/hash/text check fails: for each range, if text_hash provided, recompute on existing slice (raw bytes) and compare; if old_text provided, compare exact slice; if both provided, check both. Apply replacements all-or-nothing in-memory, then write once. Return list of plists {start end updated t}. Raise (error ...) for mismatches or invalid input. Remove or deprecate replace_line_ranges per design. Add docstring/comments consistent with API spec.
+
+- *TASK-4-4-tests-and-docs* — Add tests and documentation for line range tools
+  Add ERT coverage for get_line_ranges and update_line_ranges: happy paths, hash match/mismatch, old_text match/mismatch, both provided, overlapping ranges rejected, unsorted ranges sorted, out-of-bounds rejected, all-or-nothing write behavior, empty new_text allowed, and removal of replace_line_ranges. Update README/comments or inline documentation to reflect new tools and removal of replace_line_ranges. Ensure tests avoid brittle line numbers by using temp files/fixtures and verify hashes over raw bytes.
+
+**** TASK-4-1
+
+@rb @code
+
+
+@ai
+
+I’ve added an inline API design contract (comments) for =get_line_ranges= and =update_line_ranges= in =rb-tools.el= (just above the line-range utilities). It spells out:
+
+- Args and shapes for both functions (path + ranges; ranges carry :start/:end inclusive; =update_line_ranges= also has :new_text and optional :text_hash / :old_text).
+- Validation: readable/writable as appropriate, integers, start<=end>=1, out-of-bounds rejected, overlaps rejected, and normalization by sorting descending by :start.
+- Semantics: hash over raw bytes of the exact slice; no normalization; verification rules (hash and/or old_text, both must match when supplied); fail fast on mismatch.
+- Application: apply in-memory descending, write once (all-or-nothing) after checks pass.
+- Return shapes: =get_line_ranges= returns (:start :end :text :text_hash); =update_line_ranges= returns (:start :end :updated t) in normalized order.
+- Deprecation note: =replace_line_ranges= is to be removed once the new tools land; tests/docs should target the new API.
+
+Let me know if you want this phrased differently (e.g., docstrings instead of comments, or additional clarifications about hash algorithm name, marker behavior, or error messages).
+
+**** TASK-4-2
+
+@rb @code
+
+@ai
+
+Here’s what I changed for TASK-4-2 (“Implement get_line_ranges tool”) and the story requirements:
+
+*What’s implemented*
+- Added robust core helpers:
+  - =rb-tools--line-range-boundaries= to compute exact buffer positions for inclusive line ranges.
+  - =rb-tools--line-range-slice= to return the exact substring (no normalization).
+  - =rb-tools--normalize-line-range-specs= to validate/sort ranges descending by start, reject out-of-bounds/overlaps, and optionally require =:new_text= or verification keys.
+
+- Added new tools:
+  - =get_line_ranges=: validates ranges, returns =(:start :end :text :text_hash)= (MD5 of exact slice) in normalized order.
+  - =update_line_ranges=: validates ranges, requires verification (=:text_hash= and/or =:old_text=), checks existing slices, applies edits in-memory in descending order, writes once on success, returns =(:start :end :updated t)= in normalized order.
+
+*Notes*
+- I left the old =replace_line_ranges= and its tests in place (not yet removed/deprecated in code/presets), per the “remove once new tools land” note; if you want, I can now remove/deprecate it and update presets/tests accordingly.
+- The design comments (API contract) remain; the new functions conform to those semantics.
+
+*Files touched*
+- =rb-tools.el=: added helpers and new tools.
+
+Would you like me to:
+1) Remove/deprecate =replace_line_ranges= and its preset entries/tests now, and
+2) Add ERT coverage for the new helpers/tools?
+
+@rb
+
+**** TASK-4-3
+
+@rb @code
+
+@ai
+
+We implemented TASK-4-3 by adding robust ERT coverage for the new line range tools and removed reliance on the old apply-line-range-updates tests.
+
+What changed
+- Added comprehensive tests under “Tests” for:
+  - rb-tools-get-line-ranges/basic (sorting, text, hash)
+  - update_line_ranges happy paths (hash-based, old_text, both verifications)
+  - Unsorted ranges applying correctly (descending order)
+  - Hash mismatch, old_text mismatch, missing verification
+  - Overlap and out-of-bounds rejection
+  - All-or-nothing write behavior on mixed verification
+  - Empty new_text allowed
+  - Mixed verification multi-range
+- Removed legacy rb-tools--apply-line-range-updates tests (the pure helper isn’t present anymore).
+
+Notes
+- Running tests with emacs -Q -l rb-tools.el will fail because gptel-make-tool isn’t defined in a bare Emacs. Use your normal environment (with gptel loaded) or load gptel before the batch run.
+- The deprecation note for replace_line_ranges remains; the code currently has no replace_line_ranges implementation, just the comment. Presets are already using the new tools.
+
+Files touched
+- rb-tools.el: replaced the old apply-line-range-updates ERTs with the new get/update_line_ranges coverage.
+
+@rb
+
+**** TASK-4-4
+
+@rb @code I believe most of this task has been already completed.
+
+Please verify that this is indeed the case and add what is missing.
+
+
+@ai
+
+I reviewed TASK-4-4 (“Add tests and documentation for line range tools”) and the corresponding story. Current state:
+
+- Code: =get_line_ranges= / =update_line_ranges= are implemented with validation, verification, all-or-nothing, descending sort, overlap/bounds checks, MD5 over exact slices, and return shapes per the contract. The API design comment is present.
+- Tests: Extensive ERT coverage exists for happy paths, hash/old_text/both, mismatches, overlaps, bounds, all-or-nothing, empty new_text, mixed verification, and sorting. Tests use temp files/fixtures and raw-byte hashes.
+- Presets: The active tool lists in presets already use =get_line_ranges= / =update_line_ranges=.
+- replace_line_ranges: No implementation remains; I updated the inline comment to state it has been removed.
+
+Outstanding: =project.org= still mentions =replace_line_ranges= in the tools list and notes, but per your instructions I did not edit that file.
+
+Summary of change I made:
+- In =rb-tools.el=, line ~784, clarified the deprecation note to: “replace_line_ranges has been removed; tests/docs should target the new API.”
+
+If you’d like, I can also clean up =project.org= references to the old tool (though you’ve asked me not to touch that file), or add a brief README snippet elsewhere documenting the new tools and removal.
 
 @rb
