@@ -748,9 +748,7 @@ Usable with schemas sourced from `get_json_schema_for_class'."
   '( :type "object"
      :description "Objects of the STORY class describe user stories.
 
-STORY identifiers (SIDs) typically look like 5-checkout, where `5' is an
-integer identifier and `checkout' is deduced from the story name, using
-only alphanumerics and hyphens.
+Example STORY identifiers (SIDs): STORY-1, STORY-3, STORY-124.
 
 One iteration of the development cycle typically consists of the following steps:
 
@@ -769,10 +767,9 @@ One iteration of the development cycle typically consists of the following steps
 
 TASKS may be associated with STORIES or may stand alone.
 
-If the id of a story associated with a task is `5-checkout', then a TASK
-id associated with that story may look like `5-write-css'. The integer
-from the story id is used as a prefix in all task ids associated with
-that story.
+Example TASK identifiers (TIDs): TASK-1-1-first, TASK-1-2-second, TASK-124-5-wrap-up
+
+TASK-124-5-wrap-up means the fifth task of STORY-124 with the name `wrap-up'
 
 "
      :properties ( :name ( :type "string"
@@ -1187,12 +1184,12 @@ Returns a list of matching objects as plists (keyword keys)."
 
 (ert-deftest rb-tools--validate-json-object/accepts-valid-story ()
   (let* ((schema (rb-tools--get-json-schema-for-class 'STORY))
-         (obj '((class . "STORY") (id . 1) (name . "Login") (description . "As a user..."))))
+         (obj '((class . "STORY") (id . "STORY-8") (name . "Login") (description . "As a user..."))))
     (should (rb-tools--validate-json-object obj schema))))
 
 (ert-deftest rb-tools--validate-json-object/rejects-missing-required-const ()
   (let* ((schema (rb-tools--get-json-schema-for-class 'STORY))
-         (obj '((id . 1) (name . "Login"))))
+         (obj '((id . "STORY-8") (name . "Login"))))
     (should-error (rb-tools--validate-json-object obj schema))))
 
 (ert-deftest rb-tools--validate-json-object/rejects-wrong-type ()
@@ -1202,7 +1199,7 @@ Returns a list of matching objects as plists (keyword keys)."
 
 (ert-deftest rb-tools--validate-json-object/rejects-wrong-const ()
   (let* ((schema (rb-tools--get-json-schema-for-class 'TASK))
-         (obj '((class . "STORY") (id . 3) (name . "Mismatch"))))
+         (obj '((class . "STORY") (id . "STORY-3") (name . "Mismatch"))))
     (should-error (rb-tools--validate-json-object obj schema))))
 
 (ert-deftest rb-tools--json-schema-property-required-p/const-and-required ()
@@ -1303,11 +1300,6 @@ Currently the following classes are available:
 Before you do anything with objects of a certain class, invoke
 =get_json_schema_for_class= to get a description of the class and the
 JSON schema for its objects.
-
-I will refer to objects like STORY-1 or TASK-1-scaffold-project. Object
-refs have a standard format: CLASS-ID where CLASS is the name of the
-class and ID is an object identifier. Object identifiers are unique
-within a class.
 
 "))
 
