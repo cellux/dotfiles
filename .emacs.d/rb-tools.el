@@ -790,7 +790,7 @@ Usable with schemas sourced from `get_json_schema_for_class'."
   '( :type "object"
      :description "Objects of the STORY class describe user stories.
 
-Example STORY identifiers (SIDs): STORY-1, STORY-3, STORY-124.
+STORY IDs look like STORY-<number>-<slug>.
 
 One iteration of the development cycle typically consists of the following steps:
 
@@ -809,9 +809,13 @@ One iteration of the development cycle typically consists of the following steps
 
 TASKS may be associated with STORIES or may stand alone.
 
-Example TASK identifiers (TIDs): TASK-1-1-first, TASK-1-2-second, TASK-124-5-wrap-up
+STORY IDs look like STORY-<number>-<slug>, and tasks under that story
+like TASK-<number>-<sequence>-<slug> where <number> matches the story’s
+number and <sequence> is an integer order.
 
-TASK-124-5-wrap-up means the fifth task of STORY-124 with the name `wrap-up'
+Example TASK identifiers: TASK-1-1-first, TASK-1-2-second, TASK-124-5-wrap-up
+
+TASK-124-5-wrap-up means the fifth task of STORY-124 with the slug `wrap-up'
 
 "
      :properties ( :name ( :type "string"
@@ -840,7 +844,6 @@ Fleshes out all the details necessary for successful implementation.")
  '(( :name "class"
      :type string
      :description "Name of the class, an uppercase string."))
- :confirm t
  :include t)
 
 
