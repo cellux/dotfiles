@@ -257,7 +257,6 @@ PREVIEW-LINES controls how many lines are included in each preview (default: 1).
      :type integer
      :description "Number of lines to include in the preview (defaults to 1)."
      :optional t))
- :confirm t
  :include t)
 
 (defun rb-tools-ts-get-nodes (path line-numbers)
@@ -321,7 +320,6 @@ Each element in the returned list contains the following fields:
      :items (:type integer)
      :description "List of line numbers referencing the start of each target node.")
    )
- :confirm t
  :include t)
 
 (defun rb-tools-ts-update-nodes (path nodes &optional skip-format dry-run)
@@ -617,7 +615,6 @@ EXTRA-ARGS is a string of additional flags passed to rg, parsed with
      :type string
      :description "Additional args to pass to rg, e.g. \"-g *.el --hidden\"."
      :optional t))
- :confirm t
  :include t)
 
 (defun rb-tools-fd (query &optional directory extra-args)
@@ -665,7 +662,6 @@ Hidden directories are searched by default except the .git folder."
    ( :name "extra_args"
      :type string
      :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
- :confirm t
  :include t)
 
 (defvar rb-tools--json-value-missing
@@ -983,7 +979,6 @@ Returns the validated object alist."
                                   :value (:type string)))
            :description "Additional properties as name/value pairs."
            :optional t))
- :confirm t
  :include t)
 
 (defun rb-tools--read-object-from-filesystem (class id &optional properties)
@@ -1051,7 +1046,6 @@ returned.  The result is a plist with keyword keys."
            :items (:type string)
            :description "Optional list of property names to return; if omitted, all properties are returned."
            :optional t))
- :confirm t
  :include t)
 
 (defun rb-tools-update-object (class id properties)
@@ -1118,7 +1112,6 @@ Returns the full updated object as a plist."
                     :properties ( :name (:type string)
                                   :value (:type string)))
            :description "Properties to update as name/value pairs."))
- :confirm t
  :include t)
 
 (defun rb-tools--list-object-ids (class)
@@ -1209,7 +1202,6 @@ Returns a list of matching objects as plists (keyword keys)."
                                   :value (:type string)))
            :description "List of property name/regex pairs to match content."
            :optional t))
- :confirm t
  :include t)
 
 ;;; Tests -----------------------------------------------------------------
