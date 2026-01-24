@@ -1222,9 +1222,25 @@ Returns a list of matching objects as plists (keyword keys)."
         (push major-mode modes)))
     (delete-dups modes)))
 
-(defun rb-tools--preset-system-dev ()
-  "Build system prompt for the @dev preset."
-  "You play the role of an agent who helps me develop software.
+(defun rb-tools--preset-tools-dev ()
+  "Build tools for the @dev preset."
+  (let ((tools '("elisp_eval"
+                 "tree_sitter_list_nodes"
+                 "tree_sitter_get_nodes"
+                 "read_file"
+                 "rg"
+                 "fd"
+                 "get_json_schema_for_class"
+                 "get_object"
+                 "find_object"))
+        (modes (rb-tools--all-active-major-modes)))
+    (when (memq 'clojure-mode modes)
+      (push "clojure_eval" tools))
+    tools))
+
+(gptel-make-preset 'dev
+  :description "Development preset - only used as a base for others."
+  :system "You play the role of an agent who helps me develop software.
 
 You are inside a project folder and we are conversing via gptel in Emacs.
 
@@ -1274,28 +1290,8 @@ _General guidelines_
 
 - if something is not clear, ask for clarification
 
-")
-
-(defun rb-tools--preset-tools-dev ()
-  "Build tools for the @dev preset."
-  (let ((tools '("elisp_eval"
-                 "tree_sitter_list_nodes"
-                 "tree_sitter_get_nodes"
-                 "read_file"
-                 "rg"
-                 "fd"
-                 "get_json_schema_for_class"
-                 "get_object"
-                 "find_object"))
-        (modes (rb-tools--all-active-major-modes)))
-    (when (memq 'clojure-mode modes)
-      (push "clojure_eval" tools))
-    tools))
-
-(gptel-make-preset 'dev
-  :description "Development preset - only used as a base for others."
-  :system #'rb-tools--preset-system-dev
-  :tools '(:eval (rb-tools--preset-tools-dev) )
+"
+  :tools '(:eval (rb-tools--preset-tools-dev))
   :temperature 0.1)
 
 (gptel-make-preset 'store-editor
