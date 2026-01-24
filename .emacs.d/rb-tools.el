@@ -122,6 +122,45 @@ SCRIPT must be a non-empty string.  The script is executed through `bash
   '((emacs-lisp-mode . elisp)
     (go-mode . go)))
 
+;;; Configuration and IO injection ---------------------------------------
+
+(defvar rb-tools-object-store-root nil
+  "Override for the object store base directory.
+When non-nil, object store files are written under this root instead of the
+current project root.")
+
+(defvar rb-tools-ts-format-function #'indent-region
+  "Function used to format updated Tree-sitter nodes.
+Called with START and END when formatting is requested.  Bind to nil to
+disable formatting.")
+
+(defvar rb-tools-io-read-file-function #'rb-tools--default-io-read-file
+  "Function used to read a whole file into a string.
+It must accept a PATH argument and return the file contents as a string.")
+
+(defvar rb-tools-io-write-file-function #'rb-tools--default-io-write-file
+  "Function used to write a string to PATH.
+It must accept PATH and CONTENT arguments.")
+
+(defun rb-tools--io-read-file (path)
+  "Read PATH using `rb-tools-io-read-file-function'."
+  (funcall rb-tools-io-read-file-function path))
+
+(defun rb-tools--io-write-file (path content)
+  "Write CONTENT to PATH using `rb-tools-io-write-file-function'."
+  (funcall rb-tools-io-write-file-function path content))
+
+(defun rb-tools--default-io-read-file (path)
+  "Default implementation to read PATH as a string."
+  (with-temp-buffer
+    (insert-file-contents path)
+    (buffer-string)))
+
+(defun rb-tools--default-io-write-file (path content)
+  "Default implementation to write CONTENT to PATH."
+  (with-temp-file path
+    (insert content)))
+
 (defun rb-tools--ts-node-successfully-parsed? (node)
   "Determine if Tree-sitter could parse NODE without errors or missing parts.
 Returns nil if the parse failed and a non-nil value otherwise."
@@ -159,6 +198,7 @@ Returns nil if the parse failed and a non-nil value otherwise."
 
 (defun rb-tools--ts-with-root (path require-writable fn)
   "Open PATH in a temp buffer, ensure mode/Tree-sitter ready, and run FN.
+FN gets the Tree-sitter PARSER and root NODE as arguments.
 If REQUIRE-WRITABLE is non-nil, verify that path is writable."
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
@@ -183,7 +223,7 @@ If REQUIRE-WRITABLE is non-nil, verify that path is writable."
               (unless (rb-tools--ts-node-successfully-parsed? root)
                 (error (or (rb-tools--ts-node-parse-errors root)
                            (format "Tree-sitter failed to parse %s" path))))
-              (funcall fn))))
+              (funcall fn parser root))))
       (set-buffer-modified-p nil))))
 
 (defun rb-tools--ts-validate-node (root spec)
@@ -207,6 +247,74 @@ If REQUIRE-WRITABLE is non-nil, verify that path is writable."
         (error "Hash mismatch for node %s" idx))
       (list node text kind line hash))))
 
+(defun rb-tools--ts-collect-root-children (root)
+  "Return child nodes of ROOT as plists with :index, :kind, :line, :text."
+  (let ((child-count (treesit-node-child-count root t))
+        (result '()))
+    (dotimes (i child-count)
+      (let* ((node (treesit-node-child root i t))
+             (text (treesit-node-text node))
+             (line (line-number-at-pos (treesit-node-start node))))
+        (push (list :index i
+                    :kind (treesit-node-type node)
+                    :line line
+                    :text text)
+              result)))
+    (nreverse result)))
+
+(defun rb-tools--ts-format-list-nodes (children &optional preview-lines)
+  "Return formatted node plists from CHILDREN for list-nodes output.
+CHILDREN is a list of plists containing :index, :kind, :line, and :text.
+PREVIEW-LINES controls preview length; defaults to 1 when nil or non-positive."
+  (let ((preview-count (if (and (integerp preview-lines)
+                                (> preview-lines 0))
+                           preview-lines
+                         1)))
+    (mapcar
+     (lambda (child)
+       (let* ((text (plist-get child :text))
+              (lines (split-string text "\n"))
+              (preview (string-join (seq-take lines preview-count) "\n")))
+         (list :index (plist-get child :index)
+               :kind (plist-get child :kind)
+               :line (plist-get child :line)
+               :text_hash (secure-hash 'md5 text)
+               :preview preview)))
+     children)))
+
+(defun rb-tools--ts-select-nodes-by-line (children line-numbers)
+  "Return nodes from CHILDREN whose :line matches LINE-NUMBERS.
+LINE-NUMBERS is a list of starting lines.  Raises an error if any line is missing."
+  (let ((lines (seq-into line-numbers 'list)))
+    (mapcar
+     (lambda (line)
+       (unless (integerp line)
+         (error "Line numbers must be integers, got %s" line))
+       (let ((child (seq-find (lambda (c) (= (plist-get c :line) line)) children)))
+         (unless child
+           (error "No node starts on line %s" line))
+         (let ((text (plist-get child :text)))
+           (list :index (plist-get child :index)
+                 :kind (plist-get child :kind)
+                 :line line
+                 :text_hash (secure-hash 'md5 text)
+                 :text text))))
+     lines)))
+
+(defun rb-tools--ts-list-nodes-pure (root &optional preview-lines)
+  "Pure worker for `rb-tools-ts-list-nodes'.
+Accepts ROOT and returns formatted node plists.
+PREVIEW-LINES controls preview length."
+  (rb-tools--ts-format-list-nodes
+   (rb-tools--ts-collect-root-children root)
+   preview-lines))
+
+(defun rb-tools--ts-get-nodes-pure (root line-numbers)
+  "Pure worker for `rb-tools-ts-get-nodes'. Accepts ROOT and LINE-NUMBERS."
+  (rb-tools--ts-select-nodes-by-line
+   (rb-tools--ts-collect-root-children root)
+   line-numbers))
+
 (defun rb-tools-ts-list-nodes (path &optional preview-lines)
   "Parse PATH using Tree-sitter and return the list of top-level AST nodes.
 
@@ -219,30 +327,10 @@ Each AST node has the following fields:
 - preview: string - first PREVIEW-LINES lines of node text
 
 PREVIEW-LINES controls how many lines are included in each preview (default: 1)."
-  (unless (and (integerp preview-lines) (> preview-lines 0))
-    (setq preview-lines 1))
   (rb-tools--ts-with-root
    path nil
-   (lambda ()
-     (let* ((root (treesit-buffer-root-node))
-            (child-count (treesit-node-child-count root t))
-            (result '()))
-       (dotimes (i child-count)
-         (let* ((node (treesit-node-child root i t))
-                (text (treesit-node-text node))
-                (line (line-number-at-pos (treesit-node-start node)))
-                (lines (split-string text "\n"))
-                (line-count (length lines))
-                (preview-count (min preview-lines line-count))
-                (preview-lines-list (seq-take lines preview-count))
-                (preview (string-join preview-lines-list "\n")))
-           (push (list :index i
-                       :kind (treesit-node-type node)
-                       :line line
-                       :text_hash (secure-hash 'md5 text)
-                       :preview preview)
-                 result)))
-       (nreverse result)))))
+   (lambda (_parser root)
+     (rb-tools--ts-list-nodes-pure root preview-lines))))
 
 (gptel-make-tool
  :name "tree_sitter_list_nodes"
@@ -274,37 +362,8 @@ Each element in the returned list contains the following fields:
 - text: string - full node text"
   (rb-tools--ts-with-root
    path nil
-   (lambda ()
-     (let* ((root (treesit-buffer-root-node))
-            (child-count (treesit-node-child-count root t))
-            (lines (seq-into line-numbers 'list))
-            (result '()))
-       (dolist (line lines)
-         (unless (and (integerp line) (>= line 1))
-           (error "Invalid line number: %s" line))
-         (let ((entry
-                (catch 'found
-                  (dotimes (idx child-count)
-                    (let* ((node (treesit-node-child root idx t))
-                           (node-line (line-number-at-pos (treesit-node-start node))))
-                      (when (= node-line line)
-                        (let ((text (treesit-node-text node)))
-                          (throw 'found
-                                 (list :index idx
-                                       :kind (treesit-node-type node)
-                                       :line node-line
-                                       :text_hash (secure-hash 'md5 text)
-                                       :text text)))))))))
-           (unless entry
-             (error "No node starts on line %s" line))
-           (push entry result)))
-       (nreverse result)))))
-
-;; (rb-tools-ts-list-nodes "/home/rb/projects/dotfiles/.emacs.d/rb-tools.el")
-
-;; (rb-tools-ts-list-nodes "/home/rb/projects/mixtape/box.go")
-
-;; (rb-tools-ts-get-nodes "/home/rb/projects/mixtape/box.go" '(12))
+   (lambda (_parser root)
+     (rb-tools--ts-get-nodes-pure root line-numbers))))
 
 (gptel-make-tool
  :name "tree_sitter_get_nodes"
@@ -354,7 +413,7 @@ On success, returns the list of updated nodes (or the dry-run report):
 - text_hash: string - hash of new node text"
   (rb-tools--ts-with-root
    path t
-   (lambda ()
+   (lambda (parser _root)
      (let* ((updates (sort (seq-into nodes 'list)
                            (lambda (a b)
                              (> (plist-get a :line)
@@ -363,7 +422,8 @@ On success, returns the list of updated nodes (or the dry-run report):
        (dolist (spec updates)
          (unless (stringp (plist-get spec :new_text))
            (error "Missing new_text for node %s" (plist-get spec :index)))
-         (let* ((validated (rb-tools--ts-validate-node (treesit-buffer-root-node) spec))
+         (let* ((latest-root (treesit-buffer-root-node)) ; root changes after each update
+                (validated (rb-tools--ts-validate-node latest-root spec))
                 (node (nth 0 validated))
                 (old-text (treesit-node-text node))
                 (new-text (plist-get spec :new_text)))
@@ -372,9 +432,10 @@ On success, returns the list of updated nodes (or the dry-run report):
              (goto-char start)
              (delete-region start end)
              (insert new-text)
-             (unless (rb-tools--truthy? skip-format)
-               (let ((new-end (point)))
-                 (indent-region start new-end))))
+             (let ((fmt-fn (and (not (rb-tools--truthy? skip-format))
+                                rb-tools-ts-format-function)))
+               (when fmt-fn
+                 (funcall fmt-fn start (point)))))
            (push (list :index (plist-get spec :index)
                        :kind (plist-get spec :kind)
                        :line (plist-get spec :line)
@@ -383,7 +444,7 @@ On success, returns the list of updated nodes (or the dry-run report):
                        :old_text old-text
                        :new_text new-text)
                  changes)))
-       (let* ((root2 (treesit-buffer-root-node)))
+       (let* ((root2 (treesit-parser-root-node parser)))
          (unless (rb-tools--ts-node-successfully-parsed? root2)
            (error (or (rb-tools--ts-node-parse-errors root2)
                       "Tree-sitter reparsing failed")))
@@ -403,7 +464,7 @@ On success, returns the list of updated nodes (or the dry-run report):
                      :changes (nreverse changes)
                      :result (nreverse result))
              (progn
-               (write-region (point-min) (point-max) path nil 'silent)
+               (rb-tools--io-write-file path (buffer-string))
                (nreverse result)))))))))
 
 (gptel-make-tool
@@ -442,51 +503,15 @@ Each element of RANGES contains the following fields:
 
 - start: integer - line number of range start
 - end: integer - line number of range end
-- end_inclusive: boolean - is line at END included in the range?
+- end_inclusive: boolean - is END included in the range?
 - new_text: string - replacement text"
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
   (unless (file-writable-p path)
     (error "File is not writable: %s" path))
-  (with-temp-buffer
-    (insert-file-contents path)
-    (let ((updates (sort (seq-into ranges 'list)
-                         (lambda (a b)
-                           (> (plist-get a :start)
-                              (plist-get b :start))))))
-      (dolist (spec updates)
-        (let* ((total-lines (line-number-at-pos (point-max)))
-               (start (plist-get spec :start))
-               (end (plist-get spec :end))
-               (end-inc (rb-tools--truthy? (plist-get spec :end_inclusive)))
-               (new-text (plist-get spec :new_text)))
-          (unless (stringp new-text)
-            (error "Missing new_text for range starting at %s" start))
-          (unless (and (integerp start) (>= start 1))
-            (error "Invalid start line: %s" start))
-          (unless (and (integerp end) (>= end 1))
-            (error "Invalid end line: %s" end))
-          (when (> start total-lines)
-            (error "Start line %s beyond end of file (%s)" start total-lines))
-          (when (> end total-lines)
-            (error "End line %s beyond end of file (%s)" end total-lines))
-          (when (> start end)
-            (error "Start line %s after end line %s" start end))
-          (let (start-pos end-pos)
-            (save-excursion
-              (goto-char (point-min))
-              (forward-line (1- start))
-              (setq start-pos (point)))
-            (save-excursion
-              (goto-char (point-min))
-              (forward-line (1- end))
-              (when end-inc
-                (forward-line 1))
-              (setq end-pos (point)))
-            (goto-char start-pos)
-            (delete-region start-pos end-pos)
-            (insert new-text)))))
-    (write-region (point-min) (point-max) path nil 'silent)))
+  (let* ((content (rb-tools--io-read-file path))
+         (updated (rb-tools--apply-line-range-updates content ranges)))
+    (rb-tools--io-write-file path updated)))
 
 (gptel-make-tool
  :name "replace_line_ranges"
@@ -663,6 +688,63 @@ Hidden directories are searched by default except the .git folder."
      :type string
      :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
  :include t)
+
+;;; Pure core utilities (validation, normalization) -----------------------
+
+(defun rb-tools--validate-line-range-specs (ranges total-lines)
+  "Return normalized RANGES sorted descending by start.
+TOTAL-LINES is the number of lines in the target content.
+Signals an error for malformed specs or out-of-bounds ranges."
+  (let ((updates (sort (seq-into ranges 'list)
+                       (lambda (a b)
+                         (> (plist-get a :start)
+                            (plist-get b :start))))))
+    (dolist (spec updates)
+      (let ((start (plist-get spec :start))
+            (end (plist-get spec :end))
+            (new-text (plist-get spec :new_text)))
+        (unless (stringp new-text)
+          (error "Missing new_text for range starting at %s" start))
+        (unless (and (integerp start) (>= start 1))
+          (error "Invalid start line: %s" start))
+        (unless (and (integerp end) (>= end 1))
+          (error "Invalid end line: %s" end))
+        (when (> start total-lines)
+          (error "Start line %s beyond end of file (%s)" start total-lines))
+        (when (> end total-lines)
+          (error "End line %s beyond end of file (%s)" end total-lines))
+        (when (> start end)
+          (error "Start line %s after end line %s" start end))))
+    updates))
+
+(defun rb-tools--apply-line-range-updates (content ranges)
+  "Apply replacement specs in RANGES to CONTENT and return the updated string.
+RANGES follows `rb-tools-replace-line-ranges' shape.  This function is
+pure and performs no filesystem side effects."
+  (with-temp-buffer
+    (insert content)
+    (let* ((total-lines (line-number-at-pos (point-max)))
+           (updates (rb-tools--validate-line-range-specs ranges total-lines)))
+      (dolist (spec updates)
+        (let* ((start (plist-get spec :start))
+               (end (plist-get spec :end))
+               (end-inc (rb-tools--truthy? (plist-get spec :end_inclusive)))
+               (new-text (plist-get spec :new_text))
+               start-pos end-pos)
+          (save-excursion
+            (goto-char (point-min))
+            (forward-line (1- start))
+            (setq start-pos (point)))
+          (save-excursion
+            (goto-char (point-min))
+            (forward-line (1- end))
+            (when end-inc
+              (forward-line 1))
+            (setq end-pos (point)))
+          (goto-char start-pos)
+          (delete-region start-pos end-pos)
+          (insert new-text))))
+    (buffer-string)))
 
 (defvar rb-tools--json-value-missing
   (make-symbol "rb-tools--json-value-missing")
@@ -866,8 +948,11 @@ Fleshes out all the details necessary for successful implementation.")
     clean))
 
 (defun rb-tools--object-store-base-dir (class id)
-  "Return filesystem path for object CLASS with ID."
-  (let* ((root (rb-tools--project-root))
+  "Return filesystem path for object CLASS with ID.
+When `rb-tools-object-store-root' is non-nil, use it; otherwise fall back to
+`rb-tools--project-root'."
+  (let* ((root (or rb-tools-object-store-root
+                   (rb-tools--project-root)))
          (class-part (rb-tools--sanitize-path-component class))
          (id-part (rb-tools--sanitize-path-component id)))
     (expand-file-name (format ".store/%s/%s" class-part id-part) root)))
@@ -943,8 +1028,7 @@ already exists."
                (file (expand-file-name key-str base)))
           (unless (stringp val)
             (error "Property %s value must be a string" key))
-          (with-temp-file file
-            (insert val)))))))
+          (rb-tools--io-write-file file val))))))
 
 (defun rb-tools-insert-object (class id properties)
   "Insert a new OBJECT into the store.
@@ -998,18 +1082,14 @@ return; when PROPERTIES is nil or empty, return all properties."
             (let ((file (expand-file-name (rb-tools--sanitize-path-component key) base)))
               (unless (file-readable-p file)
                 (error "Missing property %s for object %s-%s" key class id))
-              (with-temp-buffer
-                (insert-file-contents file)
-                (push (cons key (buffer-string)) result))))
+              (push (cons key (rb-tools--io-read-file file)) result)))
           (nreverse result))
       (let ((files (directory-files base nil "^[^.].*" t))
             (result '()))
         (dolist (fname files)
           (let ((file (expand-file-name fname base)))
             (when (file-regular-p file)
-              (with-temp-buffer
-                (insert-file-contents file)
-                (push (cons fname (buffer-string)) result)))))
+              (push (cons fname (rb-tools--io-read-file file)) result))))
         (nreverse result)))))
 
 (defun rb-tools--alist-to-keyword-plist (alist)
@@ -1207,6 +1287,28 @@ Returns a list of matching objects as plists (keyword keys)."
 ;;; Tests -----------------------------------------------------------------
 (require 'ert)
 
+;; Minimal harness helpers for filesystem/buffer isolation ----------------
+(defmacro rb-tools--with-temp-dir (dir-sym &rest body)
+  "Bind DIR-SYM to a fresh temp directory and evaluate BODY.
+The directory is cleaned up on exit."
+  (declare (indent 1))
+  `(let ((,dir-sym (make-temp-file "rb-tools" t)))
+     (unwind-protect
+         (progn ,@body)
+       (when (and ,dir-sym (file-directory-p ,dir-sym))
+         (delete-directory ,dir-sym t)))))
+
+(defmacro rb-tools--with-temp-file (file-sym &rest body)
+  "Bind FILE-SYM to a fresh temp file path inside a temp dir and eval BODY.
+Cleans up the directory afterwards."
+  (declare (indent 1))
+  `(rb-tools--with-temp-dir dir
+     (let ((,file-sym (expand-file-name "tmp" dir)))
+       (write-region "" nil ,file-sym nil 'silent)
+       ,@body)))
+
+;; Unit tests --------------------------------------------------------------
+
 (ert-deftest rb-tools--normalize-json-object/plist-and-alist ()
   (let* ((plist '(:name "Story" story 42))
          (alist '((:name . "Story") (story . 42)))
@@ -1248,6 +1350,38 @@ Returns a list of matching objects as plists (keyword keys)."
     (should (rb-tools--json-schema-property-required-p :class schema))
     (should (rb-tools--json-schema-property-required-p :name schema))
     (should-not (rb-tools--json-schema-property-required-p :description schema))))
+
+(ert-deftest rb-tools--ts-format-list-nodes/basic-preview ()
+  (let* ((children (list (list :index 0 :kind "func" :line 5 :text "line1\nline2\nline3")
+                         (list :index 1 :kind "var" :line 10 :text "only1"))))
+    (let ((result (rb-tools--ts-format-list-nodes children 2)))
+      (should (= 2 (length result)))
+      (pcase-let ((`((:index 0 :kind "func" :line 5 :text_hash ,h1 :preview ,p1)
+                     (:index 1 :kind "var" :line 10 :text_hash ,h2 :preview ,p2)) result))
+        (should (string= h1 (secure-hash 'md5 "line1\nline2\nline3")))
+        (should (string= h2 (secure-hash 'md5 "only1")))
+        (should (string= p1 "line1\nline2"))
+        (should (string= p2 "only1"))))))
+
+(ert-deftest rb-tools--ts-format-list-nodes/defaults-to-1-line ()
+  (let* ((children (list (list :index 0 :kind "func" :line 5 :text "a\nb"))))
+    (dolist (preview '(nil 0 -1))
+      (let* ((result (rb-tools--ts-format-list-nodes children preview))
+             (first (car result)))
+        (should (string= (plist-get first :preview) "a"))))))
+
+(ert-deftest rb-tools--ts-select-nodes-by-line/picks-and-validates ()
+  (let* ((children (list (list :index 0 :kind "func" :line 5 :text "fn")
+                         (list :index 1 :kind "var" :line 10 :text "var"))))
+    (let ((result (rb-tools--ts-select-nodes-by-line children '(10 5))))
+      (pcase-let ((`((:index 1 :kind "var" :line 10 :text_hash ,h2 :text "var")
+                     (:index 0 :kind "func" :line 5 :text_hash ,h1 :text "fn")) result))
+        (should (string= h2 (secure-hash 'md5 "var")))
+        (should (string= h1 (secure-hash 'md5 "fn"))))))
+  ;; Missing node
+  (should-error (rb-tools--ts-select-nodes-by-line '() '(1)))
+  ;; Non-integer line
+  (should-error (rb-tools--ts-select-nodes-by-line '() '("x"))))
 
 ;;; Presets ---------------------------------------------------------------
 
