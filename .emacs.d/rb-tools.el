@@ -34,21 +34,6 @@ The rest of the response contains the evaluation result or the error message."
         (format "ERROR\n%s" (nrepl-dict-get response "err"))
       (format "OK\n%s" (nrepl-dict-get response "value")))))
 
-(gptel-make-tool
- :name "clojure_eval"
- :category "rb"
- :description (documentation 'rb-tools-clojure-eval)
- :function #'rb-tools-clojure-eval
- :args
- '(( :name "input"
-     :type string
-     :description "The form to evaluate in the context of the connected Clojure/ClojureScript app.")
-   ( :name "ns"
-     :type string
-     :description "The Clojure/ClojureScript namespace in which the form should be evaluated."))
- :confirm t
- :include t)
-
 (defun rb-tools-elisp-eval (form)
   "Evaluate FORM in the connected Emacs instance and return the textual result.
 
@@ -63,18 +48,6 @@ The rest of the response contains the evaluation result or the error message."
                      (eval (read (current-buffer))))))
         (format "OK\n%s" (prin1-to-string value)))
     (error (format "ERROR\n%s" (error-message-string err)))))
-
-(gptel-make-tool
- :name "elisp_eval"
- :category "rb"
- :description (documentation 'rb-tools-elisp-eval)
- :function #'rb-tools-elisp-eval
- :args
- '(( :name "input"
-     :type string
-     :description "The Emacs Lisp expression to evaluate inside the connected Emacs instance."))
- :confirm t
- :include t)
 
 (defun rb-tools-bash-eval (script)
   "Execute SCRIPT via Bash and return a plist describing the result.
@@ -105,18 +78,6 @@ SCRIPT must be a non-empty string.  The script is executed through `bash
       (dolist (buffer (list stdout stderr))
         (when (buffer-live-p buffer)
           (kill-buffer buffer))))))
-
-(gptel-make-tool
- :name "bash_eval"
- :category "rb"
- :description (documentation 'rb-tools-bash-eval)
- :function #'rb-tools-bash-eval
- :args
- '(( :name "script"
-     :type string
-     :description "The Bash script to evaluate via `bash -c`."))
- :confirm t
- :include t)
 
 (defvar rb-tools-major-mode-to-ts-lang-alist
   '((emacs-lisp-mode . elisp)
@@ -334,21 +295,6 @@ PREVIEW-LINES controls how many lines are included in each preview (default: 1).
    (lambda (_parser root)
      (rb-tools--ts-list-nodes-pure root preview-lines))))
 
-(gptel-make-tool
- :name "tree_sitter_list_nodes"
- :category "rb"
- :description (documentation 'rb-tools-ts-list-nodes)
- :function #'rb-tools-ts-list-nodes
- :args
- '(( :name "path"
-     :type string
-     :description "Path to the source code file.")
-   ( :name "preview_lines"
-     :type integer
-     :description "Number of lines to include in the preview (defaults to 1)."
-     :optional t))
- :include t)
-
 (defun rb-tools-ts-get-nodes (path line-numbers)
   "Parse PATH using Tree-sitter and return the text of nodes on LINE-NUMBERS.
 
@@ -366,22 +312,6 @@ Each element in the returned list contains the following fields:
    path nil
    (lambda (_parser root)
      (rb-tools--ts-get-nodes-pure root line-numbers))))
-
-(gptel-make-tool
- :name "tree_sitter_get_nodes"
- :category "rb"
- :description (documentation 'rb-tools-ts-get-nodes)
- :function #'rb-tools-ts-get-nodes
- :args
- '(( :name "path"
-     :type string
-     :description "Path to the source code file.")
-   ( :name "line_numbers"
-     :type array
-     :items (:type integer)
-     :description "List of line numbers referencing the start of each target node.")
-   )
- :include t)
 
 (defun rb-tools-ts-update-nodes (path nodes &optional skip-format dry-run)
   "Parse PATH using Tree-sitter and update specified NODES.
@@ -469,35 +399,6 @@ On success, returns the list of updated nodes (or the dry-run report):
                (rb-tools--io-write-file path (buffer-string))
                (nreverse result)))))))))
 
-(gptel-make-tool
- :name "tree_sitter_update_nodes"
- :category "rb"
- :description (documentation 'rb-tools-ts-update-nodes)
- :function #'rb-tools-ts-update-nodes
- :args
- '(( :name "path"
-     :type string
-     :description "Path to the source code file.")
-   ( :name "nodes"
-     :type array
-     :items ( :type object
-              :properties ( :index (:type integer)
-                            :kind (:type string)
-                            :line (:type integer)
-                            :text_hash (:type string)
-                            :new_text (:type string)))
-     :description "List of nodes to update.")
-   ( :name "skip_format"
-     :type boolean
-     :description "If true, do not format/reindent the new node."
-     :optional t)
-   ( :name "dry_run"
-     :type boolean
-     :description "If true, do not modify the file, just report what would be done."
-     :optional t))
- :confirm t
- :include t)
-
 (defun rb-tools-get-line-ranges (path ranges)
   "Return the exact text for each line range in RANGES from PATH.
 
@@ -521,23 +422,6 @@ order (sorted descending by :start)."
                       :text_hash (secure-hash 'md5 text))
                 result)))
       (nreverse result))))
-
-(gptel-make-tool
- :name "get_line_ranges"
- :category "rb"
- :description (documentation 'rb-tools-get-line-ranges)
- :function #'rb-tools-get-line-ranges
- :args
- '(( :name "path"
-     :type string
-     :description "Path to the source code file.")
-   ( :name "ranges"
-     :type array
-     :items ( :type object
-              :properties ( :start (:type integer)
-                            :end (:type integer)))
-     :description "List of line ranges to retrieve (1-based, inclusive)."))
- :include t)
 
 (defun rb-tools-update-line-ranges (path ranges)
   "Update the specified line RANGES in PATH with verification.
@@ -585,26 +469,6 @@ normalized order."
       (rb-tools--io-write-file path (buffer-string))
       (nreverse result))))
 
-(gptel-make-tool
- :name "update_line_ranges"
- :category "rb"
- :description (documentation 'rb-tools-update-line-ranges)
- :function #'rb-tools-update-line-ranges
- :args
- '(( :name "path"
-     :type string
-     :description "Path to the source code file.")
-   ( :name "ranges"
-     :type array
-     :items ( :type object
-              :properties ( :start (:type integer)
-                            :end (:type integer)
-                            :new_text (:type string)
-                            :text_hash (:type string :optional t)
-                            :old_text (:type string :optional t)))
-     :description "List of line ranges to replace with verification. Either text_hash or old_text must be provided."))
- :confirm t)
-
 (defun rb-tools-read-file (path &optional with-line-numbers)
   "Read the file at PATH and return its content.
 If WITH-LINE-NUMBERS is non-nil, prefix each line with its number."
@@ -630,42 +494,12 @@ If WITH-LINE-NUMBERS is non-nil, prefix each line with its number."
             result))
       (buffer-string))))
 
-(gptel-make-tool
- :name "read_file"
- :category "rb"
- :description (documentation 'rb-tools-read-file)
- :function #'rb-tools-read-file
- :args
- '(( :name "path"
-     :type string
-     :description "Path of the file to read.")
-   ( :name "with_line_numbers"
-     :type boolean
-     :description "If true, include line numbers."
-     :optional t))
- :confirm t
- :include t)
-
 (defun rb-tools-write-file (path content)
   "Write CONTENT to the file at PATH."
   (unless (file-writable-p path)
     (error "File is not writable: %s" path))
   (with-temp-file path
     (insert content)))
-
-(gptel-make-tool
- :name "write_file"
- :category "rb"
- :description (documentation 'rb-tools-write-file)
- :function #'rb-tools-write-file
- :args
- '(( :name "path"
-     :type string
-     :description "Path of the file to write.")
-   ( :name "content"
-     :type string
-     :description "New content of the file."))
- :confirm t)
 
 (defun rb-tools-rg (pattern &optional directory extra-args)
   "Run ripgrep PATTERN inside DIRECTORY and return its output as a string.
@@ -696,25 +530,6 @@ EXTRA-ARGS is a string of additional flags passed to rg, parsed with
                    exit-code
                    (string-trim-right (buffer-string))))))))))
 
-(gptel-make-tool
- :name "rg"
- :category "rb"
- :description "Run ripgrep in a directory and return matches."
- :function #'rb-tools-rg
- :args
- '(( :name "pattern"
-     :type string
-     :description "Regex pattern to search for.")
-   ( :name "directory"
-     :type string
-     :description "Directory to search (defaults to current directory)."
-     :optional t)
-   ( :name "extra_args"
-     :type string
-     :description "Additional args to pass to rg, e.g. \"-g *.el --hidden\"."
-     :optional t))
- :include t)
-
 (defun rb-tools-fd (query &optional directory extra-args)
   "Run fd QUERY inside DIRECTORY and return its output as a string.
 
@@ -744,23 +559,6 @@ Hidden directories are searched by default except the .git folder."
             (error "Executable fd failed with exit code %s\n%s"
                    exit-code
                    (string-trim-right (buffer-string)))))))))
-
-(gptel-make-tool
- :name "fd"
- :category "rb"
- :description "Run fd in a directory and return matches."
- :function #'rb-tools-fd
- :args
- '(( :name "query"
-     :type string
-     :description "Pattern to search for.")
-   ( :name "directory"
-     :type string
-     :description "Directory to search (defaults to current directory).")
-   ( :name "extra_args"
-     :type string
-     :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
- :include t)
 
 ;;; Line range tools API ---------------------------------
 
@@ -1005,17 +803,6 @@ Fleshes out all the details necessary for successful implementation.")
     (error "CLASS must be string or symbol, got %s" class))
   (rb-tools--get-json-schema-for-class class))
 
-(gptel-make-tool
- :name "get_json_schema_for_class"
- :category "rb"
- :description (documentation 'rb-tools-get-json-schema-for-class)
- :function #'rb-tools-get-json-schema-for-class
- :args
- '(( :name "class"
-     :type string
-     :description "Name of the class, an uppercase string."))
- :include t)
-
 
 ;;; Object store ----------------------------------------------------------
 
@@ -1137,26 +924,6 @@ Returns the validated object alist."
     (rb-tools--write-object-to-filesystem object nil)
     object))
 
-(gptel-make-tool
- :name "insert_object"
- :category "rb"
- :description (documentation 'rb-tools-insert-object)
- :function #'rb-tools-insert-object
- :args '(( :name "class"
-           :type string
-           :description "Object class, uppercase string.")
-         ( :name "id"
-           :type string
-           :description "Object identifier, unique within a class.")
-         ( :name "properties"
-           :type array
-           :items ( :type object
-                    :properties ( :name (:type string)
-                                  :value (:type string)))
-           :description "Additional properties as name/value pairs."
-           :optional t))
- :include t)
-
 (defun rb-tools--read-object-from-filesystem (class id &optional properties)
   "Return the object ID of CLASS from the store as an alist.
 If PROPERTIES is non-nil, it must be a list/array of property names to
@@ -1201,24 +968,6 @@ array/list of property names to return; when omitted, all properties are
 returned.  The result is a plist with keyword keys."
   (let ((alist (rb-tools--read-object-from-filesystem class id properties)))
     (rb-tools--alist-to-keyword-plist alist)))
-
-(gptel-make-tool
- :name "get_object"
- :category "rb"
- :description (documentation 'rb-tools-get-object)
- :function #'rb-tools-get-object
- :args '(( :name "class"
-           :type string
-           :description "Object class, uppercase string.")
-         ( :name "id"
-           :type string
-           :description "Object identifier, unique within a class.")
-         ( :name "properties"
-           :type array
-           :items (:type string)
-           :description "Optional list of property names to return; if omitted, all properties are returned."
-           :optional t))
- :include t)
 
 (defun rb-tools-update-object (class id properties)
   "Update an existing object in the store.
@@ -1266,25 +1015,6 @@ Returns the full updated object as a plist."
         ;; Write back
         (rb-tools--write-object-to-filesystem updated t)
         (rb-tools--alist-to-keyword-plist updated)))))
-
-(gptel-make-tool
- :name "update_object"
- :category "rb"
- :description (documentation 'rb-tools-update-object)
- :function #'rb-tools-update-object
- :args '(( :name "class"
-           :type string
-           :description "Object class, uppercase string.")
-         ( :name "id"
-           :type string
-           :description "Object identifier, unique within a class.")
-         ( :name "properties"
-           :type array
-           :items ( :type object
-                    :properties ( :name (:type string)
-                                  :value (:type string)))
-           :description "Properties to update as name/value pairs."))
- :include t)
 
 (defun rb-tools--list-object-ids (class)
   "Return a list of object IDs for CLASS from the store."
@@ -1354,27 +1084,6 @@ Returns a list of matching objects as plists (keyword keys)."
                   (when oid (puthash oid t match-set)))))
             (setq candidates (seq-filter (lambda (oid) (gethash oid match-set)) candidates)))))
       (mapcar (lambda (oid) (rb-tools-get-object class-str oid)) candidates))))
-
-(gptel-make-tool
- :name "find_objects"
- :category "rb"
- :description (documentation 'rb-tools-find-objects)
- :function #'rb-tools-find-objects
- :args '(( :name "class"
-           :type string
-           :description "Object class, uppercase string.")
-         ( :name "id"
-           :type string
-           :description "Optional object identifier regex to restrict search."
-           :optional t)
-         ( :name "properties"
-           :type array
-           :items ( :type object
-                    :properties ( :name (:type string)
-                                  :value (:type string)))
-           :description "List of property name/regex pairs to match content."
-           :optional t))
- :include t)
 
 ;;; Tests -----------------------------------------------------------------
 (require 'ert)
@@ -1576,6 +1285,299 @@ Cleans up the directory afterwards."
                        (:start 1 :end 1 :updated t))))
       (should (string= (rb-tools--io-read-file path) "L1\nl2\nL3\n")))))
 
+
+;;; Tools -----------------------------------------------------------------
+
+(gptel-make-tool
+ :name "clojure_eval"
+ :category "rb"
+ :description (documentation 'rb-tools-clojure-eval)
+ :function #'rb-tools-clojure-eval
+ :args
+ '(( :name "input"
+     :type string
+     :description "The form to evaluate in the context of the connected Clojure/ClojureScript app.")
+   ( :name "ns"
+     :type string
+     :description "The Clojure/ClojureScript namespace in which the form should be evaluated."))
+ :confirm t
+ :include t)
+
+(gptel-make-tool
+ :name "elisp_eval"
+ :category "rb"
+ :description (documentation 'rb-tools-elisp-eval)
+ :function #'rb-tools-elisp-eval
+ :args
+ '(( :name "input"
+     :type string
+     :description "The Emacs Lisp expression to evaluate inside the connected Emacs instance."))
+ :confirm t
+ :include t)
+
+(gptel-make-tool
+ :name "bash_eval"
+ :category "rb"
+ :description (documentation 'rb-tools-bash-eval)
+ :function #'rb-tools-bash-eval
+ :args
+ '(( :name "script"
+     :type string
+     :description "The Bash script to evaluate via `bash -c`."))
+ :confirm t
+ :include t)
+
+(gptel-make-tool
+ :name "tree_sitter_list_nodes"
+ :category "rb"
+ :description (documentation 'rb-tools-ts-list-nodes)
+ :function #'rb-tools-ts-list-nodes
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "preview_lines"
+     :type integer
+     :description "Number of lines to include in the preview (defaults to 1)."
+     :optional t))
+ :include t)
+
+(gptel-make-tool
+ :name "tree_sitter_get_nodes"
+ :category "rb"
+ :description (documentation 'rb-tools-ts-get-nodes)
+ :function #'rb-tools-ts-get-nodes
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "line_numbers"
+     :type array
+     :items (:type integer)
+     :description "List of line numbers referencing the start of each target node.")
+   )
+ :include t)
+
+(gptel-make-tool
+ :name "tree_sitter_update_nodes"
+ :category "rb"
+ :description (documentation 'rb-tools-ts-update-nodes)
+ :function #'rb-tools-ts-update-nodes
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "nodes"
+     :type array
+     :items ( :type object
+              :properties ( :index (:type integer)
+                            :kind (:type string)
+                            :line (:type integer)
+                            :text_hash (:type string)
+                            :new_text (:type string)))
+     :description "List of nodes to update.")
+   ( :name "skip_format"
+     :type boolean
+     :description "If true, do not format/reindent the new node."
+     :optional t)
+   ( :name "dry_run"
+     :type boolean
+     :description "If true, do not modify the file, just report what would be done."
+     :optional t))
+ :confirm t
+ :include t)
+
+(gptel-make-tool
+ :name "get_line_ranges"
+ :category "rb"
+ :description (documentation 'rb-tools-get-line-ranges)
+ :function #'rb-tools-get-line-ranges
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "ranges"
+     :type array
+     :items ( :type object
+              :properties ( :start (:type integer)
+                            :end (:type integer)))
+     :description "List of line ranges to retrieve (1-based, inclusive)."))
+ :include t)
+
+(gptel-make-tool
+ :name "update_line_ranges"
+ :category "rb"
+ :description (documentation 'rb-tools-update-line-ranges)
+ :function #'rb-tools-update-line-ranges
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "ranges"
+     :type array
+     :items ( :type object
+              :properties ( :start (:type integer)
+                            :end (:type integer)
+                            :new_text (:type string)
+                            :text_hash (:type string :optional t)
+                            :old_text (:type string :optional t)))
+     :description "List of line ranges to replace with verification. Either text_hash or old_text must be provided."))
+ :confirm t)
+
+(gptel-make-tool
+ :name "read_file"
+ :category "rb"
+ :description (documentation 'rb-tools-read-file)
+ :function #'rb-tools-read-file
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path of the file to read.")
+   ( :name "with_line_numbers"
+     :type boolean
+     :description "If true, include line numbers."
+     :optional t))
+ :confirm t
+ :include t)
+
+(gptel-make-tool
+ :name "write_file"
+ :category "rb"
+ :description (documentation 'rb-tools-write-file)
+ :function #'rb-tools-write-file
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path of the file to write.")
+   ( :name "content"
+     :type string
+     :description "New content of the file."))
+ :confirm t)
+
+(gptel-make-tool
+ :name "rg"
+ :category "rb"
+ :description "Run ripgrep in a directory and return matches."
+ :function #'rb-tools-rg
+ :args
+ '(( :name "pattern"
+     :type string
+     :description "Regex pattern to search for.")
+   ( :name "directory"
+     :type string
+     :description "Directory to search (defaults to current directory)."
+     :optional t)
+   ( :name "extra_args"
+     :type string
+     :description "Additional args to pass to rg, e.g. \"-g *.el --hidden\"."
+     :optional t))
+ :include t)
+
+(gptel-make-tool
+ :name "fd"
+ :category "rb"
+ :description "Run fd in a directory and return matches."
+ :function #'rb-tools-fd
+ :args
+ '(( :name "query"
+     :type string
+     :description "Pattern to search for.")
+   ( :name "directory"
+     :type string
+     :description "Directory to search (defaults to current directory).")
+   ( :name "extra_args"
+     :type string
+     :description "Additional args to pass to fd, e.g. \"--type f --max-depth 3\"."))
+ :include t)
+
+(gptel-make-tool
+ :name "get_json_schema_for_class"
+ :category "rb"
+ :description (documentation 'rb-tools-get-json-schema-for-class)
+ :function #'rb-tools-get-json-schema-for-class
+ :args
+ '(( :name "class"
+     :type string
+     :description "Name of the class, an uppercase string."))
+ :include t)
+
+(gptel-make-tool
+ :name "insert_object"
+ :category "rb"
+ :description (documentation 'rb-tools-insert-object)
+ :function #'rb-tools-insert-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "Additional properties as name/value pairs."
+           :optional t))
+ :include t)
+
+(gptel-make-tool
+ :name "get_object"
+ :category "rb"
+ :description (documentation 'rb-tools-get-object)
+ :function #'rb-tools-get-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items (:type string)
+           :description "Optional list of property names to return; if omitted, all properties are returned."
+           :optional t))
+ :include t)
+
+(gptel-make-tool
+ :name "update_object"
+ :category "rb"
+ :description (documentation 'rb-tools-update-object)
+ :function #'rb-tools-update-object
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Object identifier, unique within a class.")
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "Properties to update as name/value pairs."))
+ :include t)
+
+(gptel-make-tool
+ :name "find_objects"
+ :category "rb"
+ :description (documentation 'rb-tools-find-objects)
+ :function #'rb-tools-find-objects
+ :args '(( :name "class"
+           :type string
+           :description "Object class, uppercase string.")
+         ( :name "id"
+           :type string
+           :description "Optional object identifier regex to restrict search."
+           :optional t)
+         ( :name "properties"
+           :type array
+           :items ( :type object
+                    :properties ( :name (:type string)
+                                  :value (:type string)))
+           :description "List of property name/regex pairs to match content."
+           :optional t))
+ :include t)
 
 ;;; Presets ---------------------------------------------------------------
 
