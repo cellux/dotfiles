@@ -829,7 +829,7 @@ Fleshes out all the details necessary for successful implementation.")
   (let* ((root (rb-tools--project-root))
          (class-part (rb-tools--sanitize-path-component class))
          (id-part (rb-tools--sanitize-path-component id)))
-    (expand-file-name (format ".objects/%s/%s" class-part id-part) root)))
+    (expand-file-name (format ".store/%s/%s" class-part id-part) root)))
 
 (defun rb-tools--extract-property (entry)
   "Extract (NAME . VALUE) from property ENTRY.
@@ -1079,7 +1079,7 @@ Returns the full updated object as a plist."
 (defun rb-tools--list-object-ids (class)
   "Return a list of object IDs for CLASS from the store."
   (let* ((class-dir (expand-file-name
-                     (format ".objects/%s" (rb-tools--sanitize-path-component class))
+                     (format ".store/%s" (rb-tools--sanitize-path-component class))
                      (rb-tools--project-root)))
          (ids '()))
     (when (file-directory-p class-dir)
@@ -1105,7 +1105,7 @@ Returns a list of matching objects as plists (keyword keys)."
     (error "ID regex must be a non-empty string when provided"))
   (let* ((class-str (if (symbolp class) (symbol-name class) class))
          (class-dir (expand-file-name
-                     (format ".objects/%s" (rb-tools--sanitize-path-component class-str))
+                     (format ".store/%s" (rb-tools--sanitize-path-component class-str))
                      (rb-tools--project-root))))
     (unless (file-directory-p class-dir)
       (cl-return-from rb-tools-find-object '()))
