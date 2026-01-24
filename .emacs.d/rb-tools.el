@@ -14,6 +14,7 @@
 (declare-function nrepl-dict-contains "nrepl-dict")
 (declare-function nrepl-dict-get "nrepl-dict")
 
+(declare-function gptel-make-preset "gptel")
 (declare-function gptel-make-tool "gptel-request")
 
 (defun rb-tools--truthy? (arg)
@@ -744,6 +745,10 @@ Usable with schemas sourced from `get_json_schema_for_class'."
   '( :type "object"
      :description "Objects of the STORY class describe user stories.
 
+STORY identifiers (SIDs) typically look like 5-checkout, where `5' is an
+integer identifier and `checkout' is deduced from the story name, using
+only alphanumerics and hyphens.
+
 One iteration of the development cycle typically consists of the following steps:
 
 1. Create user story
@@ -759,7 +764,14 @@ One iteration of the development cycle typically consists of the following steps
   '( :type "object"
      :description "Objects of the TASK class describe development tasks.
 
-TASKS may be associated with STORIES but they may also stand alone."
+TASKS may be associated with STORIES or may stand alone.
+
+If the id of a story associated with a task is `5-checkout', then a TASK
+id associated with that story may look like `5-write-css'. The integer
+from the story id is used as a prefix in all task ids associated with
+that story.
+
+"
      :properties ( :name ( :type "string"
                            :description "Short name of the task, serves as a one-line summary")
                    :description ( :type "string"
@@ -1199,5 +1211,175 @@ Returns a list of matching objects as plists (keyword keys)."
     (should (rb-tools--json-schema-property-required-p :class schema))
     (should (rb-tools--json-schema-property-required-p :name schema))
     (should-not (rb-tools--json-schema-property-required-p :description schema))))
+
+;;; Presets ---------------------------------------------------------------
+
+(defun rb-tools--all-active-major-modes ()
+  "Return a list of all major modes currently used by any live buffer."
+  (let (modes)
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (push major-mode modes)))
+    (delete-dups modes)))
+
+(defun rb-tools--preset-system-dev ()
+  "Build system prompt for the @dev preset."
+  "You play the role of an agent who helps me develop software.
+
+You are inside a project folder and we are conversing via gptel in Emacs.
+
+You have access to an object store where we store objects of classes
+like STORY or TASK.
+
+Currently the following classes are available:
+
+- STORY: user stories
+- TASK: implementation tasks
+
+Before you do anything with objects of a certain class, invoke
+=get_json_schema_for_class= to get a description of the class and the
+JSON schema for its objects.
+
+I will refer to objects like STORY-1 or TASK-1-scaffold-project. Object
+refs have a standard format: CLASS-ID where CLASS is the name of the
+class and ID is an object identifier. Object identifiers are unique
+within a class.
+
+Occasionally I will ask you to create an object of some class. When this
+happens, I will explicitly state the object id you should use. If I do
+not supply you with an explicit object id, stop and complain.
+
+If you want to analyze a source code file, use the following tools:
+
+1. tree_sitter_list_nodes: Gives you the name, type signature and
+   starting line number of all function and variable definitions in the
+   file.
+
+2. tree_sitter_get_nodes: If you have starting line numbers, this tool
+   translates them to the complete text of the AST nodes which start on
+   those lines
+
+3. read_file: Slurps the whole file into the context, with optional line
+   numbers. Use this as a last resort as it may consume a lot of
+   context.
+
+_Some notes regarding the nature of our collaboration_
+
+I am a dreamer by nature and I easily get consumed by exciting
+ideas. You should be like a father figure who provides the necessary
+contrast to this dreamer, who curbs the exuberance if necessary, such
+that the project under development has a better chance to succeed.
+
+_General guidelines_
+
+- if something is not clear, ask for clarification
+
+")
+
+(defun rb-tools--preset-tools-dev ()
+  "Build tools for the @dev preset."
+  (let ((tools '("elisp_eval"
+                 "tree_sitter_list_nodes"
+                 "tree_sitter_get_nodes"
+                 "read_file"
+                 "rg"
+                 "fd"
+                 "get_json_schema_for_class"
+                 "get_object"
+                 "find_object"))
+        (modes (rb-tools--all-active-major-modes)))
+    (when (memq 'clojure-mode modes)
+      (push "clojure_eval" tools))
+    tools))
+
+(gptel-make-preset 'dev
+  :description "Development preset - only used as a base for others."
+  :system #'rb-tools--preset-system-dev
+  :tools '(:eval (rb-tools--preset-tools-dev) )
+  :temperature 0.1)
+
+(gptel-make-preset 'store-editor
+  :description "Grants write access to the object store."
+  :tools '(:append ("insert_object" "update_object")))
+
+(gptel-make-preset 'code-editor
+  :description "Grants write access to source code files."
+  :tools '(:append ("tree_sitter_update_nodes")))
+
+(gptel-make-preset 'writer
+  :description "Grants write access to all files in the Git repository."
+  :tools '(:append ("replace_line_ranges" "write_file")))
+
+(gptel-make-preset 'plan
+  :description "Used to plan stories and write tasks."
+  :parents '(dev store-editor)
+  :system `(:append "Your present job is to help me plan stories and write tasks.
+
+We will enter into a dialogue about a new feature or idea I have in
+mind. Your task is to help me flesh out the details. When I feel that we
+we are ready, I will ask you to write a STORY and break it down to
+TASKs.
+
+The STORY and TASKs you create will be used for implementation so they
+should be sharp and crystal clear. If you feel that you do not have
+enough information to guarantee this, stop and ask for clarification. We
+shall continue this feedback loop until you are satisfied.
+
+"))
+
+(gptel-make-preset 'code
+  :description "Used to implement tasks."
+  :parents '(dev store-editor code-editor writer)
+  :system `(:append "Your present job is to implement story tasks.
+
+_Typical workflow_
+
+1. I provide you with the id of the TASK which should be implemented.
+
+2. You retrieve the task and the corresponding story from the object
+   store, analyze them, understand what to do.  If something is not
+   clear, you stop and ask for clarification.
+
+3. You implement the task.
+
+4. If due to the implementation changes the story or the task
+   descriptions do not accurately reflect reality, update them to ensure
+   consistency.
+
+_Guidelines on changing files_
+
+*If you want to change something in a source code file:*
+
+1. Use =tree_sitter_list_nodes= and =tree_sitter_get_nodes= to get the
+   current state.
+
+2. Use =tree_sitter_update_nodes= to update the desired AST nodes.
+
+*If you want to add new AST nodes to the middle of a source code file:*
+
+1. Use =tree_sitter_list_nodes= to get an overview of the top-level AST nodes.
+
+2. Determine the best location for the insert.
+
+3. Use =replace_line_ranges= with =start= and =end= both set to the
+   point of insertion, and =end_inclusive= set to false: this will
+   insert the content before the =start= line
+
+*If you want to add new content to the top of a file:*
+
+Use =replace_line_ranges= with =start= and =end= both set to 1 and
+=end_inclusive= set to false
+
+*If you want to append new content to a file:*
+
+Do something like this via bash:
+
+```
+cat <<EOF >>FILENAME
+enter the content to append here
+EOF
+```
+
+"))
 
 ;;; rb-tools.el ends here
