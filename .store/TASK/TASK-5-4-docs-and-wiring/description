@@ -1,0 +1,1 @@
+Document the new tree_sitter_insert_before_node and tree_sitter_insert_after_node tools alongside existing Tree-sitter helpers (args, behavior, failure modes). Wire them into the rb preset (rb-tools--preset-tools-dev or equivalent) so they are available to GPTel clients. Note any skip_format defaults and return shape.

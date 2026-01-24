@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'cl-generic)
+(require 'cl-lib)
 (require 'subr-x)
 (require 'treesit)
 
@@ -263,6 +264,64 @@ Raises an error if any line is missing."
                  :text text))))
      lines)))
 
+(defun rb-tools--ts-resolve-node (root selector)
+  "Resolve a unique top-level node in ROOT matching SELECTOR.
+
+SELECTOR is a plist that may contain :text_hash (string) and/or :line
+ (integer).  At least one selector must be provided.  When both are
+provided, both must refer to the same node.
+
+Returns a plist with :node, :index, :kind, :line, :start, :end, :text,
+and :text_hash.  Signals an error on missing selectors, missing matches,
+or ambiguous matches."
+  (let* ((line (plist-get selector :line))
+         (text-hash (plist-get selector :text_hash)))
+    (unless (or line text-hash)
+      (error "Selector must provide :line and/or :text_hash"))
+    (let ((child-count (treesit-node-child-count root t))
+          line-match
+          hash-matches)
+      (dotimes (i child-count)
+        (let* ((node (treesit-node-child root i t))
+               (start (treesit-node-start node))
+               (end (treesit-node-end node))
+               (kind (treesit-node-type node))
+               (text (treesit-node-text node))
+               (line-num (line-number-at-pos start))
+               (hash (secure-hash 'md5 text))
+               (entry (list :node node
+                            :index i
+                            :kind kind
+                            :line line-num
+                            :start start
+                            :end end
+                            :text text
+                            :text_hash hash)))
+          (when (and line (= line line-num))
+            (setq line-match entry))
+          (when (and text-hash (string= text-hash hash))
+            (push entry hash-matches))))
+      (when (and line (not line-match))
+        (error "No node starts on line %s" line))
+      (when (and text-hash (null hash-matches))
+        (error "No node matches text_hash %s" text-hash))
+      (when (> (length hash-matches) 1)
+        (error "Multiple nodes match text_hash %s; disambiguate with :line" text-hash))
+      (let (candidate)
+        (cond
+         ((and line text-hash)
+          (unless (and line-match
+                       (string= text-hash (plist-get line-match :text_hash)))
+            (error "Line %s and text_hash did not match the same node" line))
+          (setq candidate line-match))
+         (line
+          (setq candidate line-match))
+         (text-hash
+          (setq candidate (car hash-matches))))
+        (unless candidate
+          (error "Failed to resolve node"))
+        candidate))))
+
 (defun rb-tools--ts-list-nodes-pure (root &optional preview-lines)
   "Pure worker for `rb-tools-ts-list-nodes'.
 Accepts ROOT and returns formatted node plists.
@@ -399,6 +458,62 @@ On success, returns the list of updated nodes (or the dry-run report):
                (rb-tools--io-write-file path (buffer-string))
                (nreverse result)))))))))
 
+(defun rb-tools--ts-insert-relative (path selector new-text position &optional skip-format)
+  "Helper to insert NEW-TEXT relative to a resolved node in PATH.
+POSITION is either :before or :after.  SELECTOR is passed to
+`rb-tools--ts-resolve-node'.  Formats inserted region unless SKIP-FORMAT
+is non-nil.  Writes the file only after Tree-sitter reparsing succeeds.
+If the insert was successful, returns plist (:inserted t)."
+  (unless (member position '(:before :after))
+    (error "POSITION must be :before or :after"))
+  (unless (stringp new-text)
+    (error "NEW-TEXT must be a string"))
+  (rb-tools--ts-with-root
+   path t
+   (lambda (parser root)
+     (let* ((resolved (rb-tools--ts-resolve-node root selector))
+            (insert-pos (if (eq position :before)
+                            (plist-get resolved :start)
+                          ;; :end points to last char of the node
+                          (1+ (plist-get resolved :end)))))
+       (goto-char insert-pos)
+       (insert new-text)
+       (let ((fmt-fn (and (not (rb-tools--truthy? skip-format))
+                          rb-tools-ts-format-function))
+             (insert-end (point)))
+         (when fmt-fn
+           (funcall fmt-fn insert-pos insert-end)))
+       (let ((root2 (treesit-parser-root-node parser)))
+         (unless (rb-tools--ts-node-successfully-parsed? root2)
+           (error (or (rb-tools--ts-node-parse-errors root2)
+                      "Tree-sitter reparsing failed")))
+         (rb-tools--io-write-file path (buffer-string))
+         (list :inserted t))))))
+
+(defun rb-tools-ts-insert-before-node (path selector new-text &optional skip-format)
+  "Insert NEW-TEXT before the node selected by SELECTOR in PATH.
+
+SELECTOR is a plist that may contain :text_hash (string) and/or :line
+ (integer) referring to a top-level node.  The insertion is performed in
+memory, Tree-sitter is asked to reparse, and the file is written only if
+parsing succeeds.  The inserted region is formatted unless SKIP-FORMAT
+is truthy.
+
+If the insert was successful, returns plist (:inserted t)."
+  (rb-tools--ts-insert-relative path selector new-text :before skip-format))
+
+(defun rb-tools-ts-insert-after-node (path selector new-text &optional skip-format)
+  "Insert NEW-TEXT after the node selected by SELECTOR in PATH.
+
+SELECTOR is a plist that may contain :text_hash (string) and/or :line
+ (integer) referring to a top-level node.  The insertion is performed in
+memory, Tree-sitter is asked to reparse, and the file is written only if
+parsing succeeds.  The inserted region is formatted unless SKIP-FORMAT
+is truthy.
+
+If the insert was successful, returns plist (:inserted t)."
+  (rb-tools--ts-insert-relative path selector new-text :after skip-format))
+
 (defun rb-tools-get-line-ranges (path ranges)
   "Return the exact text for each line range in RANGES from PATH.
 
@@ -430,15 +545,13 @@ Each element of RANGES contains the following fields:
 
 - :start integer (1-based inclusive)
 - :end integer (1-based inclusive)
+- :text_hash string (MD5 of existing slice)
 - :new_text string (replacement text)
-- optional :text_hash string (MD5 of existing slice)
-- optional :old_text string (expected existing slice)
 
-At least one of :text_hash or :old_text must be provided.  All ranges
-are validated, sorted descending by :start, verified against the current
-file contents, and applied in-memory.  The file is written only after
-all checks pass.  Returns a list of plists (:start :end :updated t) in
-normalized order."
+All ranges are validated, sorted descending by :start, verified against
+the current file contents, and applied in-memory.  The file is written
+only after all checks pass.  Returns a list of plists (:start :end
+:updated t) in normalized order."
   (unless (file-readable-p path)
     (error "File is not readable: %s" path))
   (unless (file-writable-p path)
@@ -453,13 +566,9 @@ normalized order."
                (end (plist-get spec :end))
                (new-text (plist-get spec :new_text))
                (expected-hash (plist-get spec :text_hash))
-               (old-text-provided (plist-member spec :old_text))
-               (expected-old (plist-get spec :old_text))
                (existing (rb-tools--line-range-slice start end))
                (existing-hash (secure-hash 'md5 existing)))
-          (when (and old-text-provided (not (string= existing expected-old)))
-            (error "Existing text mismatch for range %s-%s" start end))
-          (when (and expected-hash (not (string= existing-hash expected-hash)))
+          (when (not (string= existing-hash expected-hash))
             (error "Hash mismatch for range %s-%s" start end))
           (pcase-let ((`(,start-pos . ,end-pos) (rb-tools--line-range-boundaries start end)))
             (goto-char start-pos)
@@ -586,8 +695,7 @@ Returns the specs sorted descending by :start.  Signals an error on invalid
 input (out-of-bounds, overlaps, missing fields).
 
 When REQUIRE-NEW-TEXT is non-nil, each spec must contain a string :new_text.
-When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash or
-:old_text (or both)."
+When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash."
   (let* ((specs (seq-sort (lambda (a b)
                             (> (plist-get a :start)
                                (plist-get b :start)))
@@ -598,8 +706,7 @@ When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash or
       (let* ((start (plist-get spec :start))
              (end (plist-get spec :end))
              (new-text (plist-get spec :new_text))
-             (text-hash (plist-get spec :text_hash))
-             (old-text (plist-get spec :old_text)))
+             (text-hash (plist-get spec :text_hash)))
         (unless (and (integerp start) (>= start 1))
           (error "Invalid start line: %s" start))
         (unless (and (integerp end) (>= end 1))
@@ -613,13 +720,10 @@ When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash or
         (when (and require-new-text (not (stringp new-text)))
           (error "Missing new_text for range starting at %s" start))
         (when (and require-verification
-                   (not (or (plist-member spec :text_hash)
-                            (plist-member spec :old_text))))
+                   (not (plist-member spec :text_hash)))
           (error "Missing verification for range starting at %s" start))
         (when (and (plist-member spec :text_hash) (not (stringp text-hash)))
           (error "Invalid text_hash for range starting at %s" start))
-        (when (and (plist-member spec :old_text) (not (stringp old-text)))
-          (error "Invalid old_text for range starting at %s" start))
         (when (and prev-start (>= end prev-start))
           (error "Overlapping ranges %s-%s and %s-%s" start end prev-start prev-end))
         (setq prev-start start
@@ -1108,6 +1212,26 @@ Cleans up the directory afterwards."
        (write-region "" nil ,file-sym nil 'silent)
        ,@body)))
 
+(defun rb-tools--line-number-of-substring (content substring)
+  "Return the 1-based line number where SUBSTRING first occurs in CONTENT."
+  (let ((pos (string-match (regexp-quote substring) content)))
+    (unless pos
+      (error "Substring %s not found in fixture content" substring))
+    (1+ (cl-count ?\n (substring content 0 pos)))))
+
+(defun rb-tools--multi-form-fixture ()
+  "Return fixture metadata describing a file with multiple top-level forms."
+  (let* ((defvar "(defvar alpha 1)")
+         (nl "\n")
+         (alpha-defun "(defun alpha ()\n  (message \"alpha\"))")
+         (beta-defun "(defun beta ()\n  (message \"beta\"))")
+         (content (concat ";;; fixture -*- mode: emacs-lisp -*-\n\n" defvar nl nl alpha-defun nl nl beta-defun nl)))
+    (list :content content
+          :alpha-line (rb-tools--line-number-of-substring content "(defun alpha")
+          :beta-line (rb-tools--line-number-of-substring content "(defun beta")
+          :beta-text beta-defun)))
+
+
 ;; Unit tests --------------------------------------------------------------
 
 (ert-deftest rb-tools--normalize-json-object/plist-and-alist ()
@@ -1210,22 +1334,26 @@ Cleans up the directory afterwards."
                        (:start 1 :end 1 :updated t))))
       (should (string= (rb-tools--io-read-file path) "A\nb\nC\n")))))
 
-(ert-deftest rb-tools-update-line-ranges/old-text-ok ()
+(ert-deftest rb-tools-update-line-ranges/hash-ok-single ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "x\ny\n")
-    (let* ((ranges (list (list :start 1 :end 1 :new_text "X\n" :old_text "x\n"))))
+    (let* ((hash-x (secure-hash 'md5 "x\n"))
+           (ranges (list (list :start 1 :end 1 :new_text "X\n" :text_hash hash-x))))
       (should (equal (rb-tools-update-line-ranges path ranges)
                      '((:start 1 :end 1 :updated t))))
       (should (string= (rb-tools--io-read-file path) "X\ny\n")))))
 
-(ert-deftest rb-tools-update-line-ranges/both-verifications-ok ()
+(ert-deftest rb-tools-update-line-ranges/two-ranges-hash-ok ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "p\nq\n")
     (let* ((hash-p (secure-hash 'md5 "p\n"))
-           (ranges (list (list :start 1 :end 1 :new_text "P\n" :old_text "p\n" :text_hash hash-p))))
+           (hash-q (secure-hash 'md5 "q\n"))
+           (ranges (list (list :start 2 :end 2 :new_text "Q\n" :text_hash hash-q)
+                         (list :start 1 :end 1 :new_text "P\n" :text_hash hash-p))))
       (should (equal (rb-tools-update-line-ranges path ranges)
-                     '((:start 1 :end 1 :updated t))))
-      (should (string= (rb-tools--io-read-file path) "P\nq\n")))))
+                     '((:start 2 :end 2 :updated t)
+                       (:start 1 :end 1 :updated t))))
+      (should (string= (rb-tools--io-read-file path) "P\nQ\n")))))
 
 (ert-deftest rb-tools-update-line-ranges/hash-mismatch ()
   (rb-tools--with-temp-file path
@@ -1234,10 +1362,10 @@ Cleans up the directory afterwards."
       (should-error (rb-tools-update-line-ranges path ranges))
       (should (string= (rb-tools--io-read-file path) "u\nv\n")))))
 
-(ert-deftest rb-tools-update-line-ranges/old-text-mismatch ()
+(ert-deftest rb-tools-update-line-ranges/missing-verification-with-old-text ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "p\nq\n")
-    (let* ((ranges (list (list :start 1 :end 1 :new_text "P\n" :old_text "xxx"))))
+    (let* ((ranges (list (list :start 1 :end 1 :new_text "P\n" :old_text "p\n"))))
       (should-error (rb-tools-update-line-ranges path ranges))
       (should (string= (rb-tools--io-read-file path) "p\nq\n")))))
 
@@ -1251,17 +1379,20 @@ Cleans up the directory afterwards."
 (ert-deftest rb-tools-update-line-ranges/overlap-and-bounds ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "a\nb\nc\n")
-    ;; Overlapping ranges rejected
-    (should-error (rb-tools-update-line-ranges path (list (list :start 3 :end 3 :new_text "Z\n" :old_text "c\n")
-                                                          (list :start 2 :end 3 :new_text "Y\n" :old_text "b\nc\n"))))
-    ;; Out-of-bounds rejected
-    (should-error (rb-tools-update-line-ranges path (list (list :start 5 :end 5 :new_text "oops" :old_text ""))))
-    (should (string= (rb-tools--io-read-file path) "a\nb\nc\n"))))
+    (let* ((hash-c (secure-hash 'md5 "c\n"))
+           (hash-bc (secure-hash 'md5 "b\nc\n")))
+      ;; Overlapping ranges rejected
+      (should-error (rb-tools-update-line-ranges path (list (list :start 3 :end 3 :new_text "Z\n" :text_hash hash-c)
+                                                            (list :start 2 :end 3 :new_text "Y\n" :text_hash hash-bc))))
+      ;; Out-of-bounds rejected
+      (should-error (rb-tools-update-line-ranges path (list (list :start 5 :end 5 :new_text "oops" :text_hash "dummy"))))
+      (should (string= (rb-tools--io-read-file path) "a\nb\nc\n")))))
 
 (ert-deftest rb-tools-update-line-ranges/all-or-nothing ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "one\ntwo\nthree\n")
-    (let* ((ranges (list (list :start 2 :end 2 :new_text "TWO\n" :old_text "two\n")
+    (let* ((hash-two (secure-hash 'md5 "two\n"))
+           (ranges (list (list :start 2 :end 2 :new_text "TWO\n" :text_hash hash-two)
                          (list :start 1 :end 1 :new_text "ONE\n" :text_hash "bad"))))
       (should-error (rb-tools-update-line-ranges path ranges))
       (should (string= (rb-tools--io-read-file path) "one\ntwo\nthree\n")))))
@@ -1269,22 +1400,110 @@ Cleans up the directory afterwards."
 (ert-deftest rb-tools-update-line-ranges/empty-new-text ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "keep\nremove\n")
-    (let* ((ranges (list (list :start 2 :end 2 :new_text "" :old_text "remove\n"))))
+    (let* ((hash-remove (secure-hash 'md5 "remove\n"))
+           (ranges (list (list :start 2 :end 2 :new_text "" :text_hash hash-remove))))
       (should (equal (rb-tools-update-line-ranges path ranges)
                      '((:start 2 :end 2 :updated t))))
       (should (string= (rb-tools--io-read-file path) "keep\n")))))
 
-(ert-deftest rb-tools-update-line-ranges/multi-range-mixed-verification ()
+(ert-deftest rb-tools-update-line-ranges/multi-range-hash-only ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "l1\nl2\nl3\n")
     (let* ((hash-l3 (secure-hash 'md5 "l3\n"))
+           (hash-l1 (secure-hash 'md5 "l1\n"))
            (ranges (list (list :start 3 :end 3 :new_text "L3\n" :text_hash hash-l3)
-                         (list :start 1 :end 1 :new_text "L1\n" :old_text "l1\n"))))
+                         (list :start 1 :end 1 :new_text "L1\n" :text_hash hash-l1))))
       (should (equal (rb-tools-update-line-ranges path ranges)
                      '((:start 3 :end 3 :updated t)
                        (:start 1 :end 1 :updated t))))
       (should (string= (rb-tools--io-read-file path) "L1\nl2\nL3\n")))))
 
+(ert-deftest rb-tools-ts-insert-before-node/basic ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let* ((original ";;; -*- mode: emacs-lisp; -*-\n\n(defun foo ()\n  (message \"hi\"))\n")
+           (selector (list :line 3))
+           (new-text ";; inserted\n")
+           (expected ";;; -*- mode: emacs-lisp; -*-\n\n;; inserted\n(defun foo ()\n  (message \"hi\"))\n"))
+      (rb-tools--io-write-file path original)
+      (let* ((result (rb-tools-ts-insert-before-node path selector new-text))
+             (updated (rb-tools--io-read-file path)))
+        (should (eq t (plist-get result :inserted)))
+        (should (equal updated expected))))))
+
+(ert-deftest rb-tools-ts-insert-before-node/skip-format ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path ";;; -*- mode: emacs-lisp; -*-\n\n(defun foo ()\n  (message \"hi\"))\n")
+    (let* (formatted
+           (rb-tools-ts-format-function (lambda (_s _e) (setq formatted t))))
+      (rb-tools-ts-insert-before-node path (list :line 1) ";; fmt\n")
+      (should formatted))
+    (rb-tools--io-write-file path ";;; -*- mode: emacs-lisp; -*-\n\n(defun foo ()\n  (message \"hi\"))\n")
+    (let* ((formatted nil)
+           (rb-tools-ts-format-function (lambda (_s _e) (setq formatted t))))
+      (rb-tools-ts-insert-before-node path (list :line 1) ";; nofmt\n" t)
+      (should-not formatted))))
+
+(ert-deftest rb-tools-ts-insert-after-node/rejects-parse-errors ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let* ((original "(defun foo ()\n  (message \"hi\"))\n"))
+      (rb-tools--io-write-file path original)
+      (should-error (rb-tools-ts-insert-after-node path (list :line 1) "("))
+      (should (string= original (rb-tools--io-read-file path))))))
+
+(ert-deftest rb-tools-ts-insert-before-node/rejects-ambiguous-hash ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let* ((node-text "(defvar x 1)\n")
+           (content (concat node-text node-text))
+           (hash (secure-hash 'md5 node-text)))
+      (rb-tools--io-write-file path content)
+      (should-error (rb-tools-ts-insert-before-node path (list :text_hash hash) ";; fail\n")))))
+
+(ert-deftest rb-tools-ts-insert-before-node/line-and-hash-selectors ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let* ((fixture (rb-tools--multi-form-fixture))
+           (before-text ";; before alpha\n")
+           (after-text ";; after beta\n")
+           (beta-hash (secure-hash 'md5 (plist-get fixture :beta-text))))
+      (rb-tools--io-write-file path (plist-get fixture :content))
+      (rb-tools-ts-insert-before-node path
+                                      (list :line (plist-get fixture :alpha-line))
+                                      before-text)
+      (rb-tools-ts-insert-after-node path
+                                     (list :text_hash beta-hash)
+                                     after-text)
+      (let ((expected (with-temp-buffer
+                        (insert (plist-get fixture :content))
+                        (goto-char (point-min))
+                        (forward-line (1- (plist-get fixture :alpha-line)))
+                        (insert before-text)
+                        (goto-char (point-max))
+                        (insert after-text)
+                        (buffer-string))))
+        (should (string= (rb-tools--io-read-file path) expected))))))
+
+(ert-deftest rb-tools-ts-insert-after-node/missing-selector ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let ((fixture (rb-tools--multi-form-fixture)))
+      (rb-tools--io-write-file path (plist-get fixture :content))
+      (should-error (rb-tools-ts-insert-after-node path (list :line 999)
+                                                   ";; missing\n"))
+      (should (string= (rb-tools--io-read-file path) (plist-get fixture :content))))))
+
+(ert-deftest rb-tools-ts-insert-before-node/fixture-parse-error-preserves-content ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let ((fixture (rb-tools--multi-form-fixture)))
+      (rb-tools--io-write-file path (plist-get fixture :content))
+      (should-error (rb-tools-ts-insert-before-node path
+                                                    (list :line (plist-get fixture :alpha-line))
+                                                    "("))
+      (should (string= (rb-tools--io-read-file path) (plist-get fixture :content))))))
 
 ;;; Tools -----------------------------------------------------------------
 
@@ -1388,6 +1607,52 @@ Cleans up the directory afterwards."
  :include t)
 
 (gptel-make-tool
+ :name "tree_sitter_insert_before_node"
+ :category "rb"
+ :description (documentation 'rb-tools-ts-insert-before-node)
+ :function #'rb-tools-ts-insert-before-node
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "selector"
+     :type object
+     :properties ( :line (:type integer :description "Starting line of the node." :optional t)
+                   :text_hash (:type string :description "MD5 hash of the node text." :optional t))
+     :description "Node selector by :line and/or :text_hash.")
+   ( :name "new_text"
+     :type string
+     :description "Text to insert before the node.")
+   ( :name "skip_format"
+     :type boolean
+     :description "If true, do not format/reindent the inserted text."
+     :optional t))
+ :confirm t)
+
+(gptel-make-tool
+ :name "tree_sitter_insert_after_node"
+ :category "rb"
+ :description (documentation 'rb-tools-ts-insert-after-node)
+ :function #'rb-tools-ts-insert-after-node
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "selector"
+     :type object
+     :properties ( :line (:type integer :description "Starting line of the node." :optional t)
+                   :text_hash (:type string :description "MD5 hash of the node text." :optional t))
+     :description "Node selector by :line and/or :text_hash.")
+   ( :name "new_text"
+     :type string
+     :description "Text to insert after the node.")
+   ( :name "skip_format"
+     :type boolean
+     :description "If true, do not format/reindent the inserted text."
+     :optional t))
+ :confirm t)
+
+(gptel-make-tool
  :name "get_line_ranges"
  :category "rb"
  :description (documentation 'rb-tools-get-line-ranges)
@@ -1418,10 +1683,9 @@ Cleans up the directory afterwards."
      :items ( :type object
               :properties ( :start (:type integer)
                             :end (:type integer)
-                            :new_text (:type string)
-                            :text_hash (:type string :optional t)
-                            :old_text (:type string :optional t)))
-     :description "List of line ranges to replace with verification. Either text_hash or old_text must be provided."))
+                            :text_hash (:type string :description "MD5 hash of current text block between :start and :end.")
+                            :new_text (:type string :description "Replacement text.")))
+     :description "List of line ranges to replace with verification."))
  :confirm t)
 
 (gptel-make-tool
@@ -1617,8 +1881,9 @@ _General instructions_
 2. Never touch the =project.org= file, that is used to store our
    conversations.
 
-3. If a tool does not seem to work as advertised, stop immediately and
-   report the problem.
+3. The tools which you are using have been mostly developed by me. They
+   may be buggy. If a tool does not seem to work as advertised, stop
+   immediately and report the problem so that I have a chance to fix it.
 
 _Development guidelines_
 
@@ -1646,7 +1911,16 @@ _Development guidelines_
 (gptel-make-preset 'repo-editor
   :description "Grants write access to all files in the Git repository."
   :parents '(repo-reader)
-  :tools '(:append ("write_file" "update_line_ranges")))
+  :tools '(:append ("write_file" "update_line_ranges"))
+  :system '(:append "To update a range of lines in a text file:
+
+1. If it is a source code file, use the tree_sitter tools.
+
+2. If it is a plain text file, use =get_line_ranges= to fetch the
+content and text hash for the ranges you want to update, then call
+=update_line_ranges= with the hashes and the replacements.
+
+"))
 
 (gptel-make-preset 'store-reader
   :description "Grants read access to the object store."
@@ -1680,7 +1954,7 @@ the highest id, increment by one and add a slug which feels adequate.
 
 (gptel-make-preset 'code-reader
   :description "Grants read access to source code files."
-  :tools '(:append ("tree_sitter_list_nodes" "tree_sitter_get_nodes" "read_file" "get_line_ranges"))
+  :tools '(:append ("tree_sitter_list_nodes" "tree_sitter_get_nodes" "get_line_ranges" "read_file"))
   :system '(:append "_Guidelines on analyzing source code files_
 
 *If you want to analyze a source code file, use the following tools:*
@@ -1704,7 +1978,10 @@ the highest id, increment by one and add a slug which feels adequate.
 (gptel-make-preset 'code-editor
   :description "Grants write access to source code files."
   :parents '(code-reader)
-  :tools '(:append ("tree_sitter_update_nodes" "write_file" "update_line_ranges"))
+  :tools '(:append ("tree_sitter_update_nodes"
+                    "tree_sitter_insert_before_node"
+                    "tree_sitter_insert_after_node"
+                    "write_file"))
   :system '(:append "_Guidelines on changing source code files_
 
 *If you want to change something in a source code file:*
@@ -1712,14 +1989,17 @@ the highest id, increment by one and add a slug which feels adequate.
 1. Use =tree_sitter_list_nodes= and =tree_sitter_get_nodes= to get the
    current state.
 
-2. Use =tree_sitter_update_nodes= to update the desired AST nodes.
+2a. Use =tree_sitter_update_nodes= to update or remove desired AST nodes.
+
+2b. Use =tree_sitter_insert_before_node= or
+    =tree_sitter_insert_after_node= to insert new AST nodes.
 
 "))
 
 (gptel-make-preset 'plan
   :description "Used to plan stories and write tasks."
   :parents '(dev repo-editor code-reader store-editor)
-  :system `(:append "Your present job is to help me plan stories and write tasks.
+  :system '(:append "Your present job is to help me plan stories and write tasks.
 
 _Description of the planning workflow_
 
@@ -1742,7 +2022,7 @@ coding agent in a later stage.
 (gptel-make-preset 'code
   :description "Used to implement tasks."
   :parents '(dev repo-editor code-editor store-editor)
-  :system `(:append "Your present job is to implement story tasks.
+  :system '(:append "Your present job is to implement story tasks.
 
 _Description of the implementation workflow_
 

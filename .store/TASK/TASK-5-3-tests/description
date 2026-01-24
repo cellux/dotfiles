@@ -1,0 +1,3 @@
+Add ERT tests covering hash-based and line-based targeting, before/after insertion, skip_format behavior, missing/ambiguous selector failure, and parse failure on malformed insert text. Use fixture files with multiple forms to ensure correct offsets and no partial writes on error.
+
+Check the already available tests and do not duplicate what is already there.
