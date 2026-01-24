@@ -1,0 +1,1 @@
+Split formatting/rendering from process invocation. Add tests for list/get node formatting given canned tree-sitter output; mock process calls so tests are hermetic.

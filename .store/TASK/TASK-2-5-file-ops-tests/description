@@ -1,0 +1,1 @@
+Add tests for line/range replacement, read/write wrappers, and failure cases (out-of-range, invalid ranges). Ensure functions return structured results and clear errors.

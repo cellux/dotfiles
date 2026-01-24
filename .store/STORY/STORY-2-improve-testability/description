@@ -1,0 +1,1 @@
+Refactor rb-tools.el into organized, testable sections with injection points for IO/stateful pieces, and add unit/behavior tests for core utilities (parsers, tree-sitter helpers, line/range edits, file ops). Keep everything in rb-tools.el, add small test helpers, and document how to run the test suite.

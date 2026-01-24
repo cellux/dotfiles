@@ -1,0 +1,1 @@
+Parameterize object-store root and temp-dir usage; allow passing tree-sitter formatting functions and file read/write fns for tests. Add small helper macros for with-temp-file/dir/buffer in tests.

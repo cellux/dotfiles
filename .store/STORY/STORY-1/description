@@ -1,0 +1,3 @@
+Provide a Bash evaluation helper in rb-tools.el so we can execute arbitrary shell scripts via GPTel. The helper must accept a single script string, run it with `bash -lc`, capture stdout/stderr, and return a JSON-style map containing the exit code plus both output streams. Wrapping this helper in `gptel-make-tool` (name `bash_eval`, category `rb`, :confirm t) makes the new capability available to the agent. Once the tool exists, it should be surfaced through `rb-tools--preset-tools-dev` so the dev preset exposes it along with the other default helpers.
+
+The goal of the story is to enable the planning agent and future coding agents to rely on a safe, confirmed interface for invoking Bash scripts when the situation demands it.

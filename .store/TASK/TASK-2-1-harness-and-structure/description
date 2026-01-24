@@ -1,0 +1,1 @@
+Add clear section headings in rb-tools.el (core data/validation, tree-sitter helpers, file ops, GPTel tools, nREPL delegations). Introduce a minimal ERT/f.el-based harness with temp dir/file helpers. Include a short “Running tests” note (to be transplanted) on invoking the suite.

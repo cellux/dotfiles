@@ -1,0 +1,1 @@
+Keep delegations minimal; add smoke tests that verify argument plumbing for GPTel/nREPL shells, mocking external calls. Avoid real network/process work.

@@ -1,0 +1,1 @@
+Use `gptel-make-tool` to expose `rb-tools-bash-eval` as the `bash_eval` tool (category `rb`). Document the function so the tool description accurately explains that it accepts a script string argument, requires confirmation, and returns exit code, stdout, stderr in JSON. Set `:args` appropriately and make sure `:confirm t` and `:include t` reflect the tool's availability.

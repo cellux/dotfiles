@@ -1,0 +1,1 @@
+Update `rb-tools--preset-tools-dev` to push `"bash_eval"` onto the tool list (before or after the existing entries). Ensure this preset still conditionally includes broader tools (e.g., `clojure_eval`) and document any relevant changes to the preset description if necessary.

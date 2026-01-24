@@ -1,0 +1,1 @@
+Isolate parsers/validators (range validation, payload normalization) into pure functions that accept data inputs and return values/errors without side effects. Ensure they are grouped in their section and unit-tested.
