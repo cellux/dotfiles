@@ -1,0 +1,1 @@
+Implemented the planned regex match helpers in `rb-tools.el`. Added parsing of ripgrep output, unique-match selection (with optional anchor-line tie-breaking), UTF-8 validation, and before/after character bounds for line-based insertions. Documented the API, error cases, and the fact that regexes use ripgrep's default Rust flavor. No tests were run in this environment.

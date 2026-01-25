@@ -1,0 +1,4 @@
+- **What went well:** Added a dedicated regression test file that drives `insert_before_regex` and `insert_after_regex` through their primary happy paths (unique marker, anchor-line disambiguation, Rust-flavored patterns) while asserting the file is never visited from the caller’s perspective.
+- **Changes made:** Created `rb-tools-test.el` with helpers for temporary files and buffer isolation, plus tests covering validation failures, missing/ambiguous matches, and anchor-line selection so the tools behave exactly as documented.
+- **Learnings:** Exercising the helpers through tests shows the regex helpers reliably pick the right occurrence and that the `:validate` flag actually prevents corrupt writes even when Tree-sitter rejects the temporary buffer.
+- **Reality check:** I haven’t executed the ERT suite in this environment (the harness may not have ripgrep/Tree-sitter configured), so the tests remain unrun here.

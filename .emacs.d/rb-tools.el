@@ -730,6 +730,195 @@ When REQUIRE-VERIFICATION is non-nil, each spec must provide :text_hash."
               prev-end end)))
     specs))
 
+
+;;; Regex match helpers -------------------------------------
+
+(defun rb-tools--regex-match--parse-rg-line (line)
+  "Return a match plist for LINE produced by ripgrep or nil if LINE is malformed."
+  (when (and (stringp line)
+             (not (string-empty-p line))
+             (string-match "^\\(.*?\\):\\([0-9]+\\):\\([0-9]+\\):\\(.*\\)$" line))
+    (let* ((file (match-string 1 line))
+           (line-num (string-to-number (match-string 2 line)))
+           (column (string-to-number (match-string 3 line)))
+           (text (match-string 4 line)))
+      (when (and (> line-num 0) (> column 0))
+        (list :path file
+              :line line-num
+              :column column
+              :text text)))))
+
+(defun rb-tools--regex-match--closest (matches anchor-line)
+  "Return the element of MATCHES whose :line is closest to ANCHOR-LINE.
+If several such matches are found, pick the earliest match."
+  (let ((best nil))
+    (dolist (match matches)
+      (let* ((line (plist-get match :line))
+             (distance (abs (- line anchor-line))))
+        (when (or (null best)
+                  (< distance (plist-get best :distance))
+                  (and (= distance (plist-get best :distance))
+                       (< line (plist-get (plist-get best :match) :line))))
+          (setq best (list :match match :distance distance)))))
+    (plist-get best :match)))
+
+(defun rb-tools--regex-match--matches-for-file (abs-path regex)
+  "Return the ripgrep matches for REGEX within ABS-PATH."
+  (let* ((dir (file-name-directory abs-path))
+         (filename (file-name-nondirectory abs-path)))
+    (unless (and dir (not (string-empty-p filename)))
+      (error "Invalid file path: %s" abs-path))
+    (let* ((extra (format "--column --glob %s" (shell-quote-argument filename)))
+           (output (rb-tools-rg regex dir extra)))
+      (if (string-empty-p output)
+          nil
+        (let ((lines (split-string output "\n" t))
+              (matches '()))
+          (dolist (line lines)
+            (when-let ((match (rb-tools--regex-match--parse-rg-line line)))
+              (unless (string= (file-name-nondirectory (plist-get match :path))
+                               filename)
+                (error "Ripgrep returned %s when searching %s" (plist-get match :path) abs-path))
+              (push match matches)))
+          (nreverse matches))))))
+
+(defun rb-tools--regex-match--describe (abs-path match &optional anchor-line)
+  "Return metadata for MATCH recorded in file at ABS-PATH."
+  (with-temp-buffer
+    (let ((coding-system-for-read 'utf-8))
+      (condition-case err
+          (insert-file-contents abs-path)
+        (file-error
+         (error "File %s is not valid UTF-8: %s" abs-path (error-message-string err)))))
+    (let ((total-lines (line-number-at-pos (point-max)))
+          (match-line (plist-get match :line)))
+      (when (and anchor-line (> anchor-line total-lines))
+        (error "Anchor line %d beyond end of file (%d lines) in %s"
+               anchor-line total-lines abs-path))
+      (unless (and (integerp match-line) (>= match-line 1) (<= match-line total-lines))
+        (error "Ripgrep reported line %s outside 1-%s" match-line total-lines))
+      (let ((bounds (rb-tools--line-range-boundaries match-line match-line)))
+        (list :path abs-path
+              :line match-line
+              :column (plist-get match :column)
+              :match (plist-get match :text)
+              :before (car bounds)
+              :after (cdr bounds))))))
+
+(defun rb-tools--regex-match-info (path regex &optional anchor-line)
+  "Return metadata about the unique line matching REGEX in PATH.
+
+REGEX is evaluated using ripgrep's default Rust regex flavor and restricted
+solely to PATH.  PATH must be readable, regular, and encoded in UTF-8.  When
+REGEX matches multiple lines, supply the 1-based ANCHOR-LINE to pick the
+match closest to that line; without the anchor an ambiguous match raises an
+error.  Errors are also signaled for missing files, non-UTF-8 content, and
+when the regex does not match any line.
+
+The returned plist contains :path, :line, :column, :match, :before, and
+:after, where :before/:after are character positions that bracket the
+matched line and can be used for insertions."
+  (unless (and (stringp path) (not (string-empty-p path)))
+    (error "Path is required"))
+  (unless (and (stringp regex) (not (string-empty-p regex)))
+    (error "Regex is required"))
+  (let* ((abs-path (expand-file-name path))
+         (matches nil))
+    (unless (file-readable-p abs-path)
+      (error "File is not readable: %s" abs-path))
+    (unless (file-regular-p abs-path)
+      (error "Path is not a regular file: %s" abs-path))
+    (when (and anchor-line (not (and (integerp anchor-line) (>= anchor-line 1))))
+      (error "Anchor line must be an integer >= 1"))
+    (setq matches (rb-tools--regex-match--matches-for-file abs-path regex))
+    (when (null matches)
+      (error "No matches for regex %s in %s" regex abs-path))
+    (let ((selected
+           (cond
+            ((null anchor-line)
+             (if (= (length matches) 1)
+                 (car matches)
+               (error "Regex %s matches %d lines in %s; provide :line to disambiguate"
+                      regex (length matches) abs-path)))
+            ((= (length matches) 1)
+             (car matches))
+            (t
+             (rb-tools--regex-match--closest matches anchor-line)))))
+      (rb-tools--regex-match--describe abs-path selected anchor-line))))
+
+(defun rb-tools--regex-insert--validate-buffer ()
+  "Re-parse the current buffer with Tree-sitter and signal errors.
+The buffer-local variable `major-mode' must be already set according to
+the buffer contents.  Returns non-nil when the parse succeeds; signals
+with diagnostics otherwise."
+  (let ((language (alist-get major-mode rb-tools-major-mode-to-ts-lang-alist)))
+    (unless language
+      (error "No Tree-sitter language configured for %s" major-mode))
+    (unless (treesit-ready-p language t)
+      (error "Tree-sitter not ready for language %s" language))
+    (let* ((parser (treesit-parser-create language))
+           (root (treesit-parser-root-node parser)))
+      (unless (rb-tools--ts-node-successfully-parsed? root)
+        (error (or (rb-tools--ts-node-parse-errors root)
+                   (format "Tree-sitter failed to parse %s" (or buffer-file-name "buffer")))))
+      t)))
+
+(defun rb-tools--regex-insert (path regex new-text position &optional line validate)
+  "Insert NEW-TEXT relative to the line matching REGEX in PATH.
+
+REGEX is interpreted using ripgrep's default Rust regex flavor and is
+restricted to PATH.  When REGEX matches multiple lines, supply the
+1-based LINE anchor to select the occurrence closest to that line;
+omitting LINE in that situation signals an error.  POSITION must be
+either :before or :after and determines whether NEW-TEXT is inserted
+before or after the matched line.  When VALIDATE is non-nil, the buffer
+is re-parsed with Tree-sitter before writing so syntax errors are caught
+early.
+
+Returns a plist (:inserted t) on success."
+  (unless (member position '(:before :after))
+    (error "POSITION must be :before or :after"))
+  (unless (stringp new-text)
+    (error "NEW-TEXT must be a string"))
+  (let* ((abs-path (expand-file-name path))
+         (match (rb-tools--regex-match-info abs-path regex line))
+         (insert-pos (if (eq position :before)
+                         (plist-get match :before)
+                       (plist-get match :after)))
+         (validate? (rb-tools--truthy? validate)))
+    (with-temp-buffer
+      (insert-file-contents abs-path)
+      (goto-char insert-pos)
+      (insert new-text)
+      (when validate?
+        (setq buffer-file-name abs-path)
+        (delay-mode-hooks
+          (set-auto-mode))
+        (rb-tools--regex-insert--validate-buffer))
+      (rb-tools--io-write-file abs-path (buffer-string))
+      (list :inserted t))))
+
+(defun rb-tools-insert-before-regex (path regex new-text &optional line validate)
+  "Insert NEW-TEXT immediately before the line matching REGEX in PATH.
+
+REGEX follows ripgrep's default Rust regex syntax and is restricted to PATH.
+When the expression matches multiple lines, supply the 1-based LINE anchor to
+pick the occurrence closest to that line.  VALIDATE, when non-nil, re-parses
+the edited buffer with Tree-sitter before writing so syntax errors are
+reported instead of corrupting the file.  Returns (:inserted t) on success."
+  (rb-tools--regex-insert path regex new-text :before line validate))
+
+(defun rb-tools-insert-after-regex (path regex new-text &optional line validate)
+  "Insert NEW-TEXT immediately after the line matching REGEX in PATH.
+
+REGEX follows ripgrep's default Rust regex syntax and is restricted to PATH.
+When the expression matches multiple lines, supply the 1-based LINE anchor to
+pick the occurrence closest to that line.  VALIDATE, when non-nil, re-parses
+the edited buffer with Tree-sitter before writing so syntax errors are
+reported instead of corrupting the file.  Returns (:inserted t) on success."
+  (rb-tools--regex-insert path regex new-text :after line validate))
+
+
 ;;; JSON schema for classes -----------------------
 
 (defvar rb-tools--json-value-missing
@@ -1287,6 +1476,7 @@ Cleans up the directory afterwards."
         (should (equal (gethash "name" tbl) "Story"))
         (should (equal (gethash "story" tbl) 42))))))
 
+
 (ert-deftest rb-tools--validate-json-object/accepts-valid-story ()
   (let* ((schema (rb-tools--get-json-schema-for-class 'STORY))
          (obj '((class . "STORY") (id . "STORY-8") (name . "Login") (description . "As a user..."))))
@@ -1307,6 +1497,7 @@ Cleans up the directory afterwards."
          (obj '((class . "STORY") (id . "STORY-3") (name . "Mismatch"))))
     (should-error (rb-tools--validate-json-object obj schema))))
 
+
 (ert-deftest rb-tools--json-schema-property-required-p/const-and-required ()
   (let ((schema '( :type "object"
                    :properties ( :class (:const "STORY")
@@ -1316,6 +1507,7 @@ Cleans up the directory afterwards."
     (should (rb-tools--json-schema-property-required-p :class schema))
     (should (rb-tools--json-schema-property-required-p :name schema))
     (should-not (rb-tools--json-schema-property-required-p :description schema))))
+
 
 (ert-deftest rb-tools--ts-format-list-nodes/basic-preview ()
   (let* ((children (list (list :index 0 :kind "func" :line 5 :text "line1\nline2\nline3")
@@ -1336,6 +1528,7 @@ Cleans up the directory afterwards."
              (first (car result)))
         (should (string= (plist-get first :preview) "a"))))))
 
+
 (ert-deftest rb-tools--ts-select-nodes-by-line/picks-and-validates ()
   (let* ((children (list (list :index 0 :kind "func" :line 5 :text "fn")
                          (list :index 1 :kind "var" :line 10 :text "var"))))
@@ -1349,6 +1542,7 @@ Cleans up the directory afterwards."
   ;; Non-integer line
   (should-error (rb-tools--ts-select-nodes-by-line '() '("x"))))
 
+
 (ert-deftest rb-tools-get-line-ranges/basic ()
   (rb-tools--with-temp-file path
     (rb-tools--io-write-file path "l1\nl2\nl3\n")
@@ -1361,6 +1555,7 @@ Cleans up the directory afterwards."
       (should (string= (plist-get (nth 1 result) :text) "l1\nl2\n"))
       (should (string= (plist-get (nth 0 result) :text_hash)
                        (secure-hash 'md5 "l3\n"))))))
+
 
 (ert-deftest rb-tools-update-line-ranges/sorts-and-hash-ok ()
   (rb-tools--with-temp-file path
@@ -1459,6 +1654,7 @@ Cleans up the directory afterwards."
                        (:start 1 :end 1 :updated t))))
       (should (string= (rb-tools--io-read-file path) "L1\nl2\nL3\n")))))
 
+
 (ert-deftest rb-tools-ts-insert-before-node/basic ()
   (skip-unless (treesit-ready-p 'elisp t))
   (rb-tools--with-temp-file path
@@ -1485,14 +1681,6 @@ Cleans up the directory afterwards."
            (rb-tools-ts-format-function (lambda (_s _e) (setq formatted t))))
       (rb-tools-ts-insert-before-node path (list :line 1) ";; nofmt\n" t)
       (should-not formatted))))
-
-(ert-deftest rb-tools-ts-insert-after-node/rejects-parse-errors ()
-  (skip-unless (treesit-ready-p 'elisp t))
-  (rb-tools--with-temp-file path
-    (let* ((original "(defun foo ()\n  (message \"hi\"))\n"))
-      (rb-tools--io-write-file path original)
-      (should-error (rb-tools-ts-insert-after-node path (list :line 1) "("))
-      (should (string= original (rb-tools--io-read-file path))))))
 
 (ert-deftest rb-tools-ts-insert-before-node/rejects-ambiguous-hash ()
   (skip-unless (treesit-ready-p 'elisp t))
@@ -1527,15 +1715,6 @@ Cleans up the directory afterwards."
                         (buffer-string))))
         (should (string= (rb-tools--io-read-file path) expected))))))
 
-(ert-deftest rb-tools-ts-insert-after-node/missing-selector ()
-  (skip-unless (treesit-ready-p 'elisp t))
-  (rb-tools--with-temp-file path
-    (let ((fixture (rb-tools--multi-form-fixture)))
-      (rb-tools--io-write-file path (plist-get fixture :content))
-      (should-error (rb-tools-ts-insert-after-node path (list :line 999)
-                                                   ";; missing\n"))
-      (should (string= (rb-tools--io-read-file path) (plist-get fixture :content))))))
-
 (ert-deftest rb-tools-ts-insert-before-node/fixture-parse-error-preserves-content ()
   (skip-unless (treesit-ready-p 'elisp t))
   (rb-tools--with-temp-file path
@@ -1545,6 +1724,134 @@ Cleans up the directory afterwards."
                                                     (list :line (plist-get fixture :alpha-line))
                                                     "("))
       (should (string= (rb-tools--io-read-file path) (plist-get fixture :content))))))
+
+
+(ert-deftest rb-tools-ts-insert-after-node/rejects-parse-errors ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let* ((original "(defun foo ()\n  (message \"hi\"))\n"))
+      (rb-tools--io-write-file path original)
+      (should-error (rb-tools-ts-insert-after-node path (list :line 1) "("))
+      (should (string= original (rb-tools--io-read-file path))))))
+
+(ert-deftest rb-tools-ts-insert-after-node/missing-selector ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let ((fixture (rb-tools--multi-form-fixture)))
+      (rb-tools--io-write-file path (plist-get fixture :content))
+      (should-error (rb-tools-ts-insert-after-node path (list :line 999)
+                                                   ";; missing\n"))
+      (should (string= (rb-tools--io-read-file path) (plist-get fixture :content))))))
+
+
+(ert-deftest rb-tools-insert-before-regex/basic ()
+  (rb-tools--with-temp-file path
+    (let* ((fixture ";;; fixture\n\n(defvar foo 1)\n(defvar bar 2)\n")
+           (expected ";;; fixture\n\n;; inserted\n(defvar foo 1)\n(defvar bar 2)\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-before-regex path "\\(defvar foo" ";; inserted\n")
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-before-regex/basic-2 ()
+  "Inserting before a unique marker should succeed."
+  (rb-tools--with-temp-file path
+    (let* ((fixture ";;; fixture\nmarker\nline\n")
+           (expected ";;; fixture\n;; before marker\nmarker\nline\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-before-regex path "marker" ";; before marker\n")
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-before-regex/anchor-line ()
+  "Using an anchor line selects the closest match for inserting before."
+  (rb-tools--with-temp-file path
+    (let* ((fixture "alpha\nmarker\nbeta\nmarker\ngamma\n")
+           (expected "alpha\nmarker\nbeta\n;; inserted near second marker\nmarker\ngamma\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-before-regex path "marker" ";; inserted near second marker\n" 5)
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-before-regex/missing-match ()
+  (rb-tools--with-temp-file path
+    (rb-tools--io-write-file path ";; nothing\n")
+    (should-error (rb-tools-insert-before-regex path "absent" ";; missing\n"))
+    (should (string= (rb-tools--io-read-file path) ";; nothing\n"))))
+
+(ert-deftest rb-tools-insert-before-regex/missing-match ()
+  "Missing regex matches must error and leave the file untouched."
+  (rb-tools--with-temp-file path
+    (let ((fixture "alpha\nbeta\n"))
+      (rb-tools--io-write-file path fixture)
+      (should-error (rb-tools-insert-before-regex path "missing" ";; inserted\n"))
+      (should (string= (rb-tools--io-read-file path) fixture)))))
+
+
+(ert-deftest rb-tools-insert-after-regex/basic ()
+  "Inserting after a unique marker should succeed."
+  (rb-tools--with-temp-file path
+    (let* ((fixture "marker\nline\n")
+           (expected "marker\n;; after marker\nline\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-after-regex path "marker" ";; after marker\n")
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-after-regex/anchor-line ()
+  (rb-tools--with-temp-file path
+    (let* ((fixture ";;; fixture\nmarker\nalpha\nmarker\nomega\n")
+           (expected ";;; fixture\nmarker\nalpha\nmarker\n;; after second\nomega\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-after-regex path "marker" ";; after second\n" 4)
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-after-regex/anchor-line-2 ()
+  "Using an anchor line selects the closest match for inserting after."
+  (rb-tools--with-temp-file path
+    (let* ((fixture "alpha\nmarker\nbeta\nmarker\ngamma\n")
+           (expected "alpha\nmarker\nbeta\nmarker\n;; after second marker\ngamma\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-after-regex path "marker" ";; after second marker\n" 5)
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-insert-after-regex/ambiguous-match ()
+  (rb-tools--with-temp-file path
+    (let ((fixture "marker\nmarker\n"))
+      (rb-tools--io-write-file path fixture)
+      (should-error (rb-tools-insert-after-regex path "marker" ";; fail\n"))
+      (should (string= (rb-tools--io-read-file path) fixture)))))
+
+(ert-deftest rb-tools-insert-after-regex/validate-detection ()
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let ((fixture "(defun foo ()\n  (message \"hi\"))\n"))
+      (rb-tools--io-write-file path fixture)
+      (should-error (rb-tools-insert-after-regex path "(defun foo" "(\n" nil t))
+      (should (string= (rb-tools--io-read-file path) fixture)))))
+
+(ert-deftest rb-tools-insert-after-regex/rust-regex-syntax ()
+  "Rust-flavored regexes such as inline flags should work through ripgrep."
+  (rb-tools--with-temp-file path
+    (let* ((fixture "hello\nHELLO\n")
+           (expected "hello\nHELLO\n;; inserted after uppercase\n"))
+      (rb-tools--io-write-file path fixture)
+      (rb-tools-insert-after-regex path "(?i)hello" ";; inserted after uppercase\n" 2)
+      (should (string= (rb-tools--io-read-file path) expected)))))
+
+(ert-deftest rb-tools-test-insert-after-regex/ambiguous-match ()
+  "Ambiguous regex matches must error and leave the file untouched."
+  (rb-tools--with-temp-file path
+    (let ((fixture "marker\nmarker\n"))
+      (rb-tools--io-write-file path fixture)
+      (should-error (rb-tools-insert-after-regex path "marker" ";; inserted\n"))
+      (should (string= (rb-tools--io-read-file path) fixture)))))
+
+(ert-deftest rb-tools-test-insert-after-regex/validate-failure ()
+  "Validation prevents writing corrupted files when :validate is true."
+  (skip-unless (treesit-ready-p 'elisp t))
+  (rb-tools--with-temp-file path
+    (let ((fixture "(defun foo ()\n  (message \"hi\"))\n"))
+      (rb-tools--io-write-file path fixture)
+      (should-error (rb-tools-insert-after-regex path "(defun foo" "(\n" nil t))
+      (should (string= (rb-tools--io-read-file path) fixture)))))
+
 
 ;;; Tools -----------------------------------------------------------------
 
@@ -1690,6 +1997,56 @@ Cleans up the directory afterwards."
    ( :name "skip_format"
      :type boolean
      :description "If true, do not format/reindent the inserted text."
+     :optional t))
+ :confirm t)
+
+(gptel-make-tool
+ :name "insert_before_regex"
+ :category "rb"
+ :description (documentation 'rb-tools-insert-before-regex)
+ :function #'rb-tools-insert-before-regex
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "regex"
+     :type string
+     :description "Regex marker to search for using ripgrep.")
+   ( :name "new_text"
+     :type string
+     :description "Text to insert before the matching line.")
+   ( :name "line"
+     :type integer
+     :description "Anchor line when multiple matches exist."
+     :optional t)
+   ( :name "validate"
+     :type boolean
+     :description "When true, re-parse the buffer with Tree-sitter before writing."
+     :optional t))
+ :confirm t)
+
+(gptel-make-tool
+ :name "insert_after_regex"
+ :category "rb"
+ :description (documentation 'rb-tools-insert-after-regex)
+ :function #'rb-tools-insert-after-regex
+ :args
+ '(( :name "path"
+     :type string
+     :description "Path to the source code file.")
+   ( :name "regex"
+     :type string
+     :description "Regex marker to search for using ripgrep.")
+   ( :name "new_text"
+     :type string
+     :description "Text to insert after the matching line.")
+   ( :name "line"
+     :type integer
+     :description "Anchor line when multiple matches exist."
+     :optional t)
+   ( :name "validate"
+     :type boolean
+     :description "When true, re-parse the buffer with Tree-sitter before writing."
      :optional t))
  :confirm t)
 
