@@ -4,7 +4,7 @@
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
 :GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1595 2181) (2560 2828) (3054 3157) (3305 4146) (4511 5067) (5149 6556) (6623 7103) (7161 7854) (7947 8509) (8572 9250) (9518 9768) (9819 10064) (10630 11044) (11100 11444) (11628 12099) (14327 14876) (15024 15299) (15381 15591) (15692 16279) (16374 16767) (16895 17049) (17275 17655) (17743 17937) (18141 18655) (19008 19218) (19426 19605) (19745 19987) (20050 20189) (20484 21362) (21430 21882) (21933 22377) (22785 25934) (26277 28489) (28732 29616) (29694 30201) (30253 31333) (31387 32349) (32401 33377) (33543 34427) (34479 35499) (36013 37751) (38636 40651) (40947 41103) (41298 41399) (41492 41554) (41575 41645) (41671 41795) (41824 41912) (41934 42059) (42178 42374) (42464 42589) (42634 42742) (42864 42953) (43008 45626) (45660 46876) (46909 48354) (48392 49609) (49773 51087) (51098 51321) (51415 53331) (53395 55715) (55794 57196) (57246 57801) (58663 59112) (59194 59429) (59649 60013)))
+:GPTEL_BOUNDS: ((response (1609 2195) (2574 2842) (3068 3171) (3319 4160) (4525 5081) (5163 6570) (6637 7117) (7175 7868) (7961 8523) (8586 9264) (9532 9782) (9833 10078) (10644 11058) (11114 11458) (11642 12113) (14341 14890) (15038 15313) (15395 15605) (15706 16293) (16388 16781) (16909 17063) (17289 17669) (17757 17951) (18155 18669) (19022 19232) (19440 19619) (19759 20001) (20064 20203) (20498 21376) (21444 21896) (21947 22391) (22799 25948) (26291 28503) (28746 29630) (29708 30215) (30267 31347) (31401 32363) (32415 33391) (33557 34441) (34493 35513) (36027 37765) (38650 40665) (40961 41117) (41312 41413) (41506 41568) (41589 41659) (41685 41809) (41838 41926) (41948 42073) (42192 42388) (42478 42603) (42648 42756) (42878 42967) (43022 45640) (45674 46890) (46923 48368) (48406 49623) (49787 51101) (51112 51335) (51429 53345) (53409 55729) (55808 57210) (57260 57815) (58677 59126) (59208 59443) (59663 60027) (60223 60542)))
 :END:
 
 * RB's dot files
@@ -1182,5 +1182,15 @@ Could you update the story and relevant tasks with this information?
 @ai
 
 I've updated STORY-6-regex-insert-tools and its associated TASKS with the requirement that regex syntax must follow ripgrep's default (Rust) flavor. The story now highlights this constraint in both the description and implementation plan, and each task specifies this when relevant. Let me know if anything else needs to be clarified or adjusted before we proceed.
+
+@rb @plan I changed the format of =description=, =implementation_plan= and =review= fields to markdown.
+
+Could you rewrite the relevant fields in STORY-6 and its tasks in markdown format?
+
+@ai
+
+@ai
+
+All relevant STORY/TASK fields now use Markdown formatting while keeping the latest requirements (temporary-buffer edits, optional Tree-sitter validation, ripgrep-compatible regex syntax, and the explicit testing task). Let me know if you want to tweak anything else or if you’re ready to move into implementation.
 
 @rb

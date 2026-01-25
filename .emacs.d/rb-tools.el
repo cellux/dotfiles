@@ -879,11 +879,13 @@ match, use =get_object= to retrieve the details.
      :properties ( :name ( :type "string"
                            :description "Short name of the user story, serves as a one-line summary")
                    :description ( :type "string"
+                                  :format "markdown"
                                   :description "Describes the goal we want to achieve, the problem we want to solve
 or the change we want to make through this user story.
 Written from the perspective of the user who requested the feature.
 Populated during the planning.")
                    :implementation_plan ( :type "string"
+                                          :format "markdown"
                                           :description "Describes in detail the implementation plan:
 how we are going to achieve the goal, solve the problem, make the change.
 Includes architecture, data flow, APIs, trade-offs, non-goals.
@@ -891,6 +893,7 @@ Gives an overview of the individual steps necessary to build the solution.
 Written from the perspective of the programmer.
 Populated during the planning.")
                    :review ( :type "string"
+                             :format "markdown"
                              :description "What we learned from the implementation of the story.
 Populated only after all tasks have been completed."))))
 
@@ -924,12 +927,14 @@ to retrieve the details.
      :properties ( :name ( :type "string"
                            :description "Short name of the task, serves as a one-line summary")
                    :description ( :type "string"
+                                  :format "markdown"
                                   :description "Step-by-step breakdown of the process necessary to implement this task.
 
 If an independent agent has access to the TASK and its parent STORY,
 it should be able to implement the TASK relying solely on the information
 contained within these two objects.")
                    :review ( :type "string"
+                             :format "markdown"
                              :description "What we learned from the implementation of the task.
 Populated only after the task has been completed.")
                    :story ( :type "string"
