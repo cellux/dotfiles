@@ -4,7 +4,7 @@
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
 :GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1553 2139) (2518 2786) (3012 3115) (3263 4104) (4469 5025) (5107 6514) (6581 7061) (7119 7812) (7905 8467) (8530 9208) (9476 9726) (9777 10022) (10588 11002) (11058 11402) (11586 12057) (14285 14834) (14982 15257) (15339 15549) (15650 16237) (16332 16725) (16853 17007) (17233 17613) (17701 17895) (18099 18613) (18966 19176) (19384 19563) (19703 19945) (20008 20147) (20442 21320) (21388 21840) (21891 22335) (22743 25892) (26235 28447) (28690 29574) (29652 30159) (30211 31291) (31345 32307) (32359 33335) (33501 34385) (34437 35457) (35971 37709) (38594 40609) (40905 41061) (41256 41357) (41450 41512) (41533 41603) (41629 41753) (41782 41870) (41892 42017) (42136 42332) (42422 42547) (42592 42700) (42822 42911) (42966 45584) (45618 46834) (46867 48312) (48350 49567) (49731 51045) (51056 51279) (51373 53289) (53353 55673) (55752 57154) (57204 57759)))
+:GPTEL_BOUNDS: ((response (1595 2181) (2560 2828) (3054 3157) (3305 4146) (4511 5067) (5149 6556) (6623 7103) (7161 7854) (7947 8509) (8572 9250) (9518 9768) (9819 10064) (10630 11044) (11100 11444) (11628 12099) (14327 14876) (15024 15299) (15381 15591) (15692 16279) (16374 16767) (16895 17049) (17275 17655) (17743 17937) (18141 18655) (19008 19218) (19426 19605) (19745 19987) (20050 20189) (20484 21362) (21430 21882) (21933 22377) (22785 25934) (26277 28489) (28732 29616) (29694 30201) (30253 31333) (31387 32349) (32401 33377) (33543 34427) (34479 35499) (36013 37751) (38636 40651) (40947 41103) (41298 41399) (41492 41554) (41575 41645) (41671 41795) (41824 41912) (41934 42059) (42178 42374) (42464 42589) (42634 42742) (42864 42953) (43008 45626) (45660 46876) (46909 48354) (48392 49609) (49773 51087) (51098 51321) (51415 53331) (53395 55715) (55794 57196) (57246 57801) (58663 59112) (59194 59429) (59649 60013)))
 :END:
 
 * RB's dot files
@@ -1158,3 +1158,29 @@ The only difference between the two is the insert position
 The insertion should happen in a temp buffer. If validate is true, the original file should be replaced only if validation succeeds.
 
 If you think the description is clear, write a story and break it down into implementation tasks.
+
+
+@ai
+
+Plan created: Story *STORY-6-regex-insert-tools* with description and implementation plan. Two tasks added:
+- *TASK-6-1-define-regex-match-helpers*: design helper functions to locate regex matches near an anchor line.
+- *TASK-6-2-implement-regex-insert-tools*: build the insert_before/after regex tools, honor validation, temp buffer edits, and Tree-sitter checks.
+
+Let me know when you’re ready to proceed or if you want to refine anything further.
+
+@rb @plan I think you should also add a task for writing the test cases.
+
+
+@ai
+
+I've added a third task, /TASK-6-3-regex-insert-tests/, to capture building the ERT coverage for the new regex-based insert helpers. Let me know if you'd like to adjust the scope, add more detail, or proceed to implementation planning.
+
+@rb @plan I identified an extra requirement: the syntax of the regex pattern should match what the ripgrep tool expects in its default mode.
+
+Could you update the story and relevant tasks with this information?
+
+@ai
+
+I've updated STORY-6-regex-insert-tools and its associated TASKS with the requirement that regex syntax must follow ripgrep's default (Rust) flavor. The story now highlights this constraint in both the description and implementation plan, and each task specifies this when relevant. Let me know if anything else needs to be clarified or adjusted before we proceed.
+
+@rb

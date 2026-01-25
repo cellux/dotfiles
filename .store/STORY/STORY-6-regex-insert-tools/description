@@ -1,0 +1,3 @@
+As a maintainer of the dotfiles toolkit I need a reliable way to insert text immediately before or after a specific line identified by a regex rather than brittle absolute offsets. This lets GPTel agents and me reason about edits in terms of nearby markers (comments, section headers, function signatures) and avoid corrupting surrounding forms.
+
+The new tools must also run edits in a temporary buffer and optionally re-parse the file via Tree-sitter so that syntax errors introduced by the insertion are caught before the file is overwritten. Regex patterns must follow the same flavor that ripgrep uses in its default mode (Rust regex) so GPTel users can reuse patterns across tools without surprises.
