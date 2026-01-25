@@ -854,6 +854,12 @@ Usable with schemas sourced from `get_json_schema_for_class'."
   '( :type "object"
      :description "Objects of the STORY class describe user stories.
 
+A user story describes the goal we want to achieve, the problem we want
+to solve, the change we want to make.
+
+Each user story has a number of TASK objects which are standalone,
+bite-sized chunks of the implementation plan.
+
 STORY IDs look like STORY-<number>-<slug>.
 
 One iteration of the development cycle typically consists of the following steps:
@@ -862,21 +868,41 @@ One iteration of the development cycle typically consists of the following steps
 2. Create tasks for the user story
 3. Implement individual tasks of the user story
 
-If I refer you to a STORY whose id looks like a prefix, try to find it
-via =find_objects=.
+*How to resolve STORY references:*
+
+If the reference looks like a full STORY id (STORY-<number>-<slug>) then
+try to fetch it via =get_object=. If it looks more like a prefix, use
+=find_objects= to get a list of matching stories. If there is a single
+match, use =get_object= to retrieve the details.
 
 "
      :properties ( :name ( :type "string"
                            :description "Short name of the user story, serves as a one-line summary")
                    :description ( :type "string"
-                                  :description "Long description of the user story"))))
+                                  :description "Describes the goal we want to achieve, the problem we want to solve
+or the change we want to make through this user story.
+Written from the perspective of the user who requested the feature.
+Populated during the planning.")
+                   :implementation_plan ( :type "string"
+                                          :description "Describes in detail the implementation plan:
+how we are going to achieve the goal, solve the problem, make the change.
+Includes architecture, data flow, APIs, trade-offs, non-goals.
+Gives an overview of the individual steps necessary to build the solution.
+Written from the perspective of the programmer.
+Populated during the planning.")
+                   :review ( :type "string"
+                             :description "What we learned from the implementation of the story.
+Populated only after all tasks have been completed."))))
 
 (cl-defmethod rb-tools--get-json-schema-for-class ((_class (eql 'TASK)))
   "Return the JSON schema for object store class `TASK'."
   '( :type "object"
-     :description "Objects of the TASK class describe development tasks.
+     :description "Objects of the TASK class describe individual development tasks.
 
 TASKS may be associated with STORIES or may stand alone.
+
+Each task is implemented by an independent agent who fetches the TASK
+and its parent STORY - if it has one - to build the necessary context.
 
 STORY IDs look like STORY-<number>-<slug>, and tasks under that story
 like TASK-<number>-<sequence>-<slug> where <number> matches the story’s
@@ -886,16 +912,26 @@ Example TASK identifiers: TASK-1-1-first, TASK-1-2-second, TASK-124-5-wrap-up
 
 TASK-124-5-wrap-up means the fifth task of STORY-124 with the slug `wrap-up'
 
-If I refer you to a TASK whose id looks like a prefix, try to find it
-via =find_objects=.
+*How to resolve TASK references:*
+
+If the reference looks like a full TASK
+id (STORY-<number>-<sequence>-<slug>) then try to fetch it via
+=get_object=. If it looks more like a prefix, use =find_objects= to get
+a list of matching tasks. If there is a single match, use =get_object=
+to retrieve the details.
 
 "
      :properties ( :name ( :type "string"
                            :description "Short name of the task, serves as a one-line summary")
                    :description ( :type "string"
-                                  :description "Long description of the task.
+                                  :description "Step-by-step breakdown of the process necessary to implement this task.
 
-Fleshes out all the details necessary for successful implementation.")
+If an independent agent has access to the TASK and its parent STORY,
+it should be able to implement the TASK relying solely on the information
+contained within these two objects.")
+                   :review ( :type "string"
+                             :description "What we learned from the implementation of the task.
+Populated only after the task has been completed.")
                    :story ( :type "string"
                             :description "Link to the parent story which owns this task."))))
 
@@ -1882,8 +1918,8 @@ _General instructions_
    conversations.
 
 3. The tools which you are using have been mostly developed by me. They
-   may be buggy. If a tool does not seem to work as advertised, stop
-   immediately and report the problem so that I have a chance to fix it.
+   may be buggy. If a tool does work as advertised, stop immediately and
+   report the problem so that I have a chance to fix it.
 
 _Development guidelines_
 
@@ -1947,8 +1983,8 @@ JSON schema for its objects.
 
 When this happens, I may or may not explicitly state the object id you
 should use. If I do not supply you with an explicit object id, use the
-=find_objects= tool to list all objects of a certain class, determine
-the highest id, increment by one and add a slug which feels adequate.
+=find_objects= tool to list all objects of the class, determine the
+highest id, increment by one and add a slug which feels adequate.
 
 "))
 
@@ -1999,14 +2035,13 @@ the highest id, increment by one and add a slug which feels adequate.
 (gptel-make-preset 'plan
   :description "Used to plan stories and write tasks."
   :parents '(dev repo-editor code-reader store-editor)
-  :system '(:append "Your present job is to help me plan stories and write tasks.
+  :system '(:append "Your job is to help me plan a STORY and write its TASKS.
 
 _Description of the planning workflow_
 
 We will enter into a dialogue about a new feature or idea I have in
 mind. Your task is to help me flesh out the details. When I feel that we
-we are ready, I will ask you to write a STORY and break it down to
-TASKs.
+are ready, I will ask you to write a STORY and break it down to TASKs.
 
 The STORY and TASKs you create will be used for implementation so they
 should be sharp and crystal clear. If you feel that you do not have
@@ -2017,26 +2052,50 @@ In the current stage, writing the code is out of scope: your only job is
 to prepare the story and its tasks. Implementation will be done by a
 coding agent in a later stage.
 
+The planning workflow has the following outcomes:
+
+- STORY created, description and implementation_plan fleshed out
+- TASKS created, linked to parent STORY, descriptions filled
+
+TASKS break down the implementation plan into individual steps. Each
+task should be implementable by an independent agent who has access to
+both the TASK and its STORY.
+
+All planning must be done upfront. There are no planning TASKS.
+
 "))
 
 (gptel-make-preset 'code
   :description "Used to implement tasks."
   :parents '(dev repo-editor code-editor store-editor)
-  :system '(:append "Your present job is to implement story tasks.
+  :system '(:append "Your job is to implement a TASK.
 
 _Description of the implementation workflow_
 
 1. I provide you with the id of the TASK which should be implemented.
 
-2. You retrieve the task and the corresponding story from the object
+2. You retrieve the TASK and the corresponding STORY from the object
    store, analyze them, understand what to do.  If something is not
    clear, you stop and ask for clarification.
 
-3. You implement the task.
+3. You implement the TASK.
 
-4. If due to the implementation changes the story or the task
-   descriptions do not accurately reflect reality, update them to ensure
-   consistency.
+4. You populate the =review= field of the TASK object with information
+   about the result: what went well, what had to be changed, what we
+   learnt, what reality taught us.
+
+"))
+
+(gptel-make-preset 'review
+  :description "Used to review stories."
+  :parents '(dev repo-editor code-reader store-editor)
+  :system '(:append "Your job is to review a story based on the individual reviews of its tasks.
+
+_Description of the review workflow_
+
+1. I give you a STORY id.
+2. You collect all TASKS of the STORY, extract their =review= fields.
+3. Analyze the individual reviews and write a summary into the =review= field of the STORY.
 
 "))
 
