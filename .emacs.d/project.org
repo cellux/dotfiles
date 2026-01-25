@@ -3,8 +3,8 @@
 :GPTEL_BACKEND: OpenRouter
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
-:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects tree_sitter_insert_before_node tree_sitter_insert_after_node WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1581 2167) (2546 2814) (3040 3143) (3291 4132) (4497 5053) (5135 6542) (6609 7089) (7147 7840) (7933 8495) (8558 9236) (9504 9754) (9805 10050) (10616 11030) (11086 11430) (11614 12085) (14313 14862) (15010 15285) (15367 15577) (15678 16265) (16360 16753) (16881 17035) (17261 17641) (17729 17923) (18127 18641) (18994 19204) (19412 19591) (19731 19973) (20036 20175) (20470 21348) (21416 21868) (21919 22363) (22771 25920) (26263 28475) (28718 29602) (29680 30187) (30239 31319) (31373 32335) (32387 33363) (33529 34413) (34465 35485) (35999 37737) (38622 40637) (40933 41089) (41284 41385) (41478 41540) (41561 41631) (41657 41781) (41810 41898) (41920 42045) (42164 42360) (42450 42575) (42620 42728) (42850 42939) (42994 45612) (45646 46862) (46895 48340) (48378 49595) (49759 51073) (51084 51307) (51401 53317) (53381 55701) (55780 57182) (57232 57787) (58647 60889) (61169 62145)))
+:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
+:GPTEL_BOUNDS: ((response (1553 2139) (2518 2786) (3012 3115) (3263 4104) (4469 5025) (5107 6514) (6581 7061) (7119 7812) (7905 8467) (8530 9208) (9476 9726) (9777 10022) (10588 11002) (11058 11402) (11586 12057) (14285 14834) (14982 15257) (15339 15549) (15650 16237) (16332 16725) (16853 17007) (17233 17613) (17701 17895) (18099 18613) (18966 19176) (19384 19563) (19703 19945) (20008 20147) (20442 21320) (21388 21840) (21891 22335) (22743 25892) (26235 28447) (28690 29574) (29652 30159) (30211 31291) (31345 32307) (32359 33335) (33501 34385) (34437 35457) (35971 37709) (38594 40609) (40905 41061) (41256 41357) (41450 41512) (41533 41603) (41629 41753) (41782 41870) (41892 42017) (42136 42332) (42422 42547) (42592 42700) (42822 42911) (42966 45584) (45618 46834) (46867 48312) (48350 49567) (49731 51045) (51056 51279) (51373 53289) (53353 55673) (55752 57154) (57204 57759)))
 :END:
 
 * RB's dot files
@@ -1157,56 +1157,4 @@ The only difference between the two is the insert position
 
 The insertion should happen in a temp buffer. If validate is true, the original file should be replaced only if validation succeeds.
 
-If you think the description is clear, write a story and break it down to implementation tasks.
-
-
-@ai
-
-Here’s how we can turn “Add insert_before/after regex tools” into an actionable plan:
-
-***** Story: STORY-6-regex-insert-tools
-> Introduce two GPTel helpers, =insert_before_regex= and =insert_after_regex=, that anchor insertions relative to the nearest regex match, insert via a temp buffer, atomically rewrite the file, and optionally re-parse with Tree-sitter to guard against syntax breaks. Fail clearly when the regex is absent or ambiguous. Return (:inserted t) if the insert succeeds.
-
-***** Proposed tasks
-
-1. *TASK-6-1: Specify the regex-insertion workflow*
-   - Capture the full flow for both tools: how they search for regex matches, how the “closest to line” heuristic works, how they stage edits in a temp buffer, and how =:validate t= triggers a Tree-sitter re-parse before writing.
-   - Detail the data returned by the tools (insert range, matched line, validation result/message).
-   - Document failure modes (no match, multiple matches at same distance, validation failure).
-   - Ensure the description references existing GPTel conventions (hook into =rb-tools--preset-tools= or similar).
-
-2. *TASK-6-2: Implement insert_before_regex / insert_after_regex*
-   - Add the helper functions to =rb-tools.el= that perform regex search, choose the closest occurrence to =:line=, insert =:new_text= before/after that line in a temp buffer, and atomically replace the original file.
-   - Enforce extraction of the match line context to avoid ambiguous inserts; fail fast with descriptive errors if the regex isn’t found.
-   - Wire the functions into =gptel-make-tool= so they become available as GPTel tools, matching the tooling conventions (category, :confirm, etc.).
-   - Ensure the tools return (:inserted t) on success.
-
-3. *TASK-6-3: Add validation/testing and docs*
-   - When =:validate t=, temporarily re-parse the updated buffer with Tree-sitter; only replace the file if parsing succeeds, otherwise report the parse error.
-   - Expand or add ERT coverage that exercises both tools with success and failure cases, including validation toggles.
-   - Update documentation (possibly README or inline docstrings) describing how to use the new tools and their guarantees.
-
-Would you like me to go ahead and create these tasks now?
-
-@rb @plan There is one thing I forgot: the regex should be matched via
-ripgrep and the doc comment should make it clear that the tool expects
-the regular expression syntax used by ripgrep in its default mode.
-
-Otherwise it's fine, you can proceed with the task creation.
-
-
-@ai
-
-Great! I’ve created the story *STORY-6-regex-insert-tools* with the updated description requiring ripgrep’s default regex syntax. Associated tasks are:
-
-1. *TASK-6-1-define-regex-insert-api* – Specify the exact behavior, validation rules, return structure, and failure modes for the new tools, including the “closest match to :line” heuristic and the explicit ripgrep regex expectation.
-
-2. *TASK-6-2-implement-regex-insert* – Implement the =insert_before_regex= and =insert_after_regex= helpers, ensuring they search via ripgrep, insert in a temp buffer, optionally validate with Tree-sitter, and expose the functionality through =gptel-make-tool=.
-
-3. *TASK-6-3-docs-tests-regex-insert* – Document the tools, add descriptive docstrings, and create ERT coverage that exercises success, failure, prioritization, and validation behavior without depending on external state.
-
-Would you like me to expand any of these tasks further or start moving toward implementation planning?
-
-**** Implement TASK-6-1
-
-@rb @code
+If you think the description is clear, write a story and break it down into implementation tasks.
