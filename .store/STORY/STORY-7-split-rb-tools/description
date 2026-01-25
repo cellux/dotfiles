@@ -1,0 +1,1 @@
+Break rb-tools.el into smaller, responsibility-driven files so each tool bundle is easier to reason about. The split should cover evaluation helpers, Tree-sitter helpers, line-range and regex helpers, and the JSON schema/object store layer, while leaving rb-tools.el as the thin entry point that wires together GPTel tools and presets.

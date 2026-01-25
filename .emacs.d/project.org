@@ -3,8 +3,8 @@
 :GPTEL_BACKEND: OpenRouter
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
-:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1707 2293) (2672 2940) (3166 3269) (3417 4258) (4623 5179) (5261 6668) (6735 7215) (7273 7966) (8059 8621) (8684 9362) (9630 9880) (9931 10176) (10742 11156) (11212 11556) (11740 12211) (14439 14988) (15136 15411) (15493 15703) (15804 16391) (16486 16879) (17007 17161) (17387 17767) (17855 18049) (18253 18767) (19120 19330) (19538 19717) (19857 20099) (20162 20301) (20596 21474) (21542 21994) (22045 22489) (22897 26046) (26389 28601) (28844 29728) (29806 30313) (30365 31445) (31499 32461) (32513 33489) (33655 34539) (34591 35611) (36125 37863) (38748 40763) (41059 41215) (41410 41511) (41604 41666) (41687 41757) (41783 41907) (41936 42024) (42046 42171) (42290 42486) (42576 42701) (42746 42854) (42976 43065) (43120 45738) (45772 46988) (47021 48466) (48504 49721) (49885 51199) (51210 51433) (51527 53443) (53507 55827) (55906 57308) (57358 57913) (58775 59224) (59306 59541) (59761 60125) (60320 60639) (60672 61294) (61327 62205) (62501 63257) (63308 63695) (63879 64273) (64306 64866) (64987 65480)))
+:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects insert_before_regex insert_after_regex WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
+:GPTEL_BOUNDS: ((response (1789 2375) (2754 3022) (3248 3351) (3499 4340) (4705 5261) (5343 6750) (6817 7297) (7355 8048) (8141 8703) (8766 9444) (9712 9962) (10013 10258) (10824 11238) (11294 11638) (11822 12293) (14521 15070) (15218 15493) (15575 15785) (15886 16473) (16568 16961) (17089 17243) (17469 17849) (17937 18131) (18335 18849) (19202 19412) (19620 19799) (19939 20181) (20244 20383) (20678 21556) (21624 22076) (22127 22571) (22979 26128) (26471 28683) (28926 29810) (29888 30395) (30447 31527) (31581 32543) (32595 33571) (33737 34621) (34673 35693) (36207 37945) (38830 40845) (41141 41297) (41492 41593) (41686 41748) (41769 41839) (41865 41989) (42018 42106) (42128 42253) (42372 42568) (42658 42783) (42828 42936) (43058 43147) (43202 45820) (45854 47070) (47103 48548) (48586 49803) (49967 51281) (51292 51515) (51609 53525) (53589 55909) (55988 57390) (57440 57995) (58857 59306) (59388 59623) (59843 60207) (60402 60721) (60754 61376) (61409 62287) (62583 63339) (63390 63777) (63961 64355) (64388 64948) (65068 65561) (65858 72869) (73031 74016) (74273 76105)))
 :END:
 
 * RB's dot files
@@ -1275,3 +1275,162 @@ Let me know if there’s anything else you’d like to address here.
 I’ve moved the dedicated regression tests from =rb-tools-test.el= into =rb-tools.el= right next to the rest of the helper utilities and supporting tests, so there’s no longer a separate file to manage. The standalone test file has been deleted since its contents now live inside =rb-tools.el=, keeping the provenance of the added regex-based insert tests close to the implementation they’re guarding. I didn’t run the ERT suite here, so please let me know if you’d like me to execute anything.
 
 @rb
+
+** Reorganize rb-tools.el
+
+*** Planning
+
+@rb @plan The rb-tools.el file is quite big now.
+
+I would like you to analyze its contents and write a plan for its
+reorganization: how functions could be better grouped, ordered, maybe
+renamed to make the file easier to read and understand.
+
+
+@ai
+
+Thanks for the context, RB. =rb-tools.el= is doing a lot of heavy lifting right now, and it’s pretty understandable that it feels unwieldy. I’ve gone through the file, and here’s how I think it could be reorganized to make it easier to read, reason about, and maintain:
+
+---
+
+**** 1. *Top-level layout by responsibility*
+Right now there’s a single monolithic file with sections sprinkled in (comments, helpers, tools). I’d break it into clearly delineated sections in the following order:
+
+1. *Utility helpers & core predicates* (=rb-tools--truthy?=, =rb-tools--line-range-boundaries=, etc.)
+2. *Configuration & IO injection* (=rb-tools-*-function= vars + =rb-tools--io-read/write-file=)
+3. *External adapters* (Clojure eval, Elisp eval, Bash eval, =rg=, =fd=, etc.)
+4. *Tree-sitter helpers* (helpers for parsing, validation, node selection, node updates/inserts)
+5. *Line-range / regex insert helpers* (line range utils, =rb-tools-get/update-line-ranges=, regex helpers + insert functions)
+6. *Object store support* (JSON schema helpers, object store operations, =find_objects= etc.)
+7. *Tool registration* (=gptel-make-tool= calls)
+8. *Presets*
+9. *Tests/test helpers* — ideally moved to a separate =rb-tools-test.el=, but if they must stay, keep them at the end.
+
+Rationale: grouping by feature makes it easier to “jump” to the part of the file you care about. Right now we bounce between disparate concerns (Tree-sitter, regex, JSON, tools) in a single stream. Clear sections also help with future refactors (picking which parts belong in helper modules, splitting into multiple files, etc.).
+
+---
+
+**** 2. *Stronger separation within Tree-sitter section*
+The Tree-sitter helpers could be split into logical subsections:
+
+- *Parsing helpers* (=rb-tools--ts-node-successfully-parsed?=, =rb-tools--ts-node-parse-errors=, =rb-tools--ts-with-root=)
+- *Node introspection* (=rb-tools--ts-collect-root-children=, =rb-tools--ts-format-list-nodes=, =rb-tools--ts-select-nodes-by-line=, =rb-tools--ts-resolve-node=)
+- *Public APIs* (=rb-tools-ts-list-nodes=, =rb-tools-ts-get-nodes=, =rb-tools-ts-update-nodes=, =rb-tools-ts-insert-before-node=, =rb-tools-ts-insert-after-node=)
+- *Pure helpers* (=rb-tools--ts-list-nodes-pure=, =rb-tools--ts-get-nodes-pure=)
+
+Also, consider renaming some helpers to better reflect intent, e.g.:
+
+- =rb-tools--ts-collect-root-children= → =rb-tools--ts-root-child-metadata=
+- =rb-tools--ts-format-list-nodes= → =rb-tools--ts-node-info-with-preview=
+- =rb-tools--ts-with-root= → =rb-tools--with-ts-buffer-root=
+
+Giving them clearer names makes the code more self-documenting, especially because these helpers are reused heavily by the tool definitions.
+
+---
+
+**** 3. *Line-range / regex helpers cleanup*
+These guts are reliable, but the order is a bit scattered. Within the “line/regex” section:
+
+- Keep general helpers (=rb-tools--line-range-boundaries=, =rb-tools--line-range-slice=, =rb-tools--normalize-line-range-specs=) grouped and documented together.
+- Move =rb-tools-get-line-ranges= and =rb-tools-update-line-ranges= directly after the helpers.
+- The regex helper functions (=rb-tools--regex-match--…=, =rb-tools--regex-insert=, =rb-tools-insert-before-regex=, etc.) should follow, grouped into:
+  - Matching helpers (=rb-tools--regex-match--parse-rg-line=, =--closest=, =--matches-for-file=, =--describe=, =--info=)
+  - Action helpers (=rb-tools--regex-insert=, =rb-tools-insert-before-regex=, =rb-tools-insert-after-regex=)
+  - Validation helpers (=rb-tools--regex-insert--validate-buffer=)
+
+This layout keeps “what can locate a range” close to “what can mutate a range”.
+
+---
+
+**** 4. *Object store / schema helpers split*
+The JSON schema helpers, object store logic, and =find/insert/update= APIs are closely related but currently interleaved with nothing to signal the boundaries. I’d do the following:
+
+- Move *schema helpers* (=rb-tools--json-key->string=, =rb-tools--normalize-json-object=, etc.) into their own sub-section before the =cl-defmethods=.
+- Keep =rb-tools-get-json-schema-for-class= (public facade) immediately after the methods.
+- Then begin the *object store* section (project root helpers, sanitize path, filesystem read/write, =insert-object=, =get-object=, =update-object=, =find-objects=).
+
+Also, the helper =rb-tools--sanitize-path-component= could be renamed to =rb-tools--safe-path-component= for readability, and =rb-tools--object-store-base-dir= should probably be closer to the functions that need it.
+
+---
+
+**** 5. *Tool registration & presets at the end*
+The =gptel-make-tool= and =gptel-make-preset= calls are “configuration of tools” and don’t contain algorithmic logic. Leave them near the bottom of the file, after all helpers are defined, and group them:
+
+1. Tool definitions (Eval tools, Tree-sitter tools, File/line tools, Object store tools)
+2. Presets (in the order they depend on one another)
+3. End-of-file comment
+
+This keeps the “what tools exist” summary accessible while leaving the logic above untouched.
+
+---
+
+**** 6. *Tests should live elsewhere*
+There’s a large block of =ert= tests at the end of =rb-tools.el=. If we follow “functional core, imperative shell,” these tests should probably live in a separate =rb-tools-test.el= file (perhaps under =tests/= if warranted). At minimum, move them fully to the end after the presets. If splitting files is feasible, the main file can =require= the test file only in test contexts. That keeps the core helper file focused on functionality, not verification.
+
+---
+
+**** 7. *Naming consistency*
+- Many functions start with =rb-tools--=, but a few (like =rb-tools-clojure-eval=, =rb-tools-rg=) use =-= vs =--= inconsistently. =--= is traditionally for internal helpers; consider making it consistent: =rb-tools--rg= could be private if not exposed externally (but since it’s exposed as a tool, keep it public). Maybe we can adopt this guideline:
+  - Public functions (exposed via tools or expected to be called elsewhere) use =rb-tools-<name>=.
+  - Internal helpers use =rb-tools--<name>=.
+
+- Helper names like =rb-tools--truthy?= and =rb-tools--object-from-args= are fine, but consider renaming =rb-tools--multi-form-fixture= (test helper) to =rb-tools--fixture-multi-form= for readability.
+
+- For tool commands, we already mirror tool names; keep that mapping explicit.
+
+---
+
+**** 8. *Optional: Factor out modules*
+If future maintenance becomes difficult, consider splitting the file into smaller modules. For example:
+- =rb-tools-exec.el= for evaluation helpers.
+- =rb-tools-ts.el= for Tree-sitter helpers.
+- =rb-tools-store.el= for object store logic.
+- =rb-tools-tools.el= for =gptel= integrations.
+
+This would require adjusting load paths but would significantly reduce the single-file size. For now, reorganizing within the file might be sufficient; splitting can come later if the maintenance burden grows.
+
+---
+
+Would you like me to draft a formal STORY/TASK description describing this refactor plan, or should we iterate more on the plan details before locking it in?
+
+@rb @plan I would like to split rb-tools.el into several files based on functional groups. The tests for each group should be in the corresponding file.
+
+
+@ai
+
+Thanks for the clarification, RB. I’ve created the story *STORY-7-split-rb-tools* along with the first two tasks that document how the split should look and begin extracting the evaluation helpers into their own module. Here’s where we stand:
+
+- *Story:* “Split rb-tools.el into modular files” with a crisp description and implementation plan covering the new modules, relocation of tests, and reduced entry point.
+- *Tasks:*
+  1. =TASK-7-1-define-split-plan= captures the mapping of functions/tests to the new modules and the shared configuration that must stay visible to =rb-tools.el=.
+  2. =TASK-7-2-move-eval-helpers= focuses on moving the truthiness/eval helpers into =rb-tools-eval.el=, ensuring dependencies and tests travel with them.
+
+Would you like me to continue breaking down the remaining modules (Tree-sitter helpers, IO/regex tools, JSON schema/object store) into additional tasks following the same pattern, or do you want to refine the plan further before we proceed?
+
+@rb @plan All planning should be done here. There should be no planning tasks like TASK-7-1.
+
+The whole implementation plan should be in the implementation_plan
+field of STORY-7 and TASKS should get the task-specific details in
+their descriptions.
+
+
+@ai
+
+Thanks for the clarification. Here’s where we now stand:
+
+- *Story =STORY-7-split-rb-tools=* captures the full implementation plan inside its =implementation_plan= field. It prescribes the four new modules (=rb-tools-eval.el=, =rb-tools-ts.el=, =rb-tools-io.el=, =rb-tools-store.el=), moving functionality/tests into them, keeping =rb-tools.el= as a thin aggregator that still defines the GPTel tools/presets, and re-running each module’s test group to make sure the tool wiring remains intact.
+
+- *Tasks created under that story* now each describe a concrete implementation chunk:
+  1. =TASK-7-1-define-split-plan= (“Wire rb-tools.el to the new modules”) focuses on replacing the monolith with an aggregator that requires the new files while keeping the tool definitions intact.
+  2. =TASK-7-2-move-eval-helpers= (“Extract evaluation helpers into rb-tools-eval”) isolates the truthiness and eval helpers and their tests into a dedicated module that exports the same API for the GPTel tools.
+  3. =TASK-7-3-tree-sitter-module= (“Extract Tree-sitter helpers into rb-tools-ts”) moves parser helpers, node APIs, and Tree-sitter insert/update operations plus their regression tests into a self-contained module.
+  4. =TASK-7-4-io-regex-module= (“Extract IO/regex helpers into rb-tools-io”) moves line-range, regex, ripgrep/fd, and read/write utilities with their tests into their module.
+  5. =TASK-7-6-eval-tests= (“Add module-specific tests”) ensures each module co-locates its ERT coverage and documents how to run it.
+
+All implementation planning now lives in the story’s =implementation_plan=, and each task description contains the specific work needed for that module. Let me know if you’d like me to flesh out additional tasks (e.g., for the store module or specific test moves) or if we’re ready to start executing these tasks.
+
+@rb
+
+*** TASK-7-1
+
+@rb @code
