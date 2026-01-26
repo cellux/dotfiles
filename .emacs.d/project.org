@@ -3,25 +3,31 @@
 :GPTEL_BACKEND: OpenRouter
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
-:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects insert_before_regex insert_after_regex WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (1789 2375) (2754 3022) (3248 3351) (3499 4340) (4705 5261) (5343 6750) (6817 7297) (7355 8048) (8141 8703) (8766 9444) (9712 9962) (10013 10258) (10824 11238) (11294 11638) (11822 12293) (14521 15070) (15218 15493) (15575 15785) (15886 16473) (16568 16961) (17089 17243) (17469 17849) (17937 18131) (18335 18849) (19202 19412) (19620 19799) (19939 20181) (20244 20383) (20678 21556) (21624 22076) (22127 22571) (22979 26128) (26471 28683) (28926 29810) (29888 30395) (30447 31527) (31581 32543) (32595 33571) (33737 34621) (34673 35693) (36207 37945) (38830 40845) (41141 41297) (41492 41593) (41686 41748) (41769 41839) (41865 41989) (42018 42106) (42128 42253) (42372 42568) (42658 42783) (42828 42936) (43058 43147) (43202 45820) (45854 47070) (47103 48548) (48586 49803) (49967 51281) (51292 51515) (51609 53525) (53589 55909) (55988 57390) (57440 57995) (58857 59306) (59388 59623) (59843 60207) (60402 60721) (60754 61376) (61409 62287) (62583 63339) (63390 63777) (63961 64355) (64388 64948) (65068 65561) (65858 72869) (73031 74016) (74273 76105)))
+:GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node insert_before_regex insert_after_regex get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
+:GPTEL_BOUNDS: ((response (2479 2747) (2973 3076) (3224 4065) (4430 4986) (5068 6475) (6542 7022) (7080 7773) (7866 8428) (8491 9169) (9437 9687) (9738 9983) (10549 10963) (11019 11363) (11547 12018) (14246 14795) (14943 15218) (15300 15510) (15611 16198) (16293 16686) (16814 16968) (17194 17574) (17662 17856) (18060 18574) (18927 19137) (19345 19524) (19664 19906) (19969 20108) (20403 21281) (21349 21801) (21852 22296) (22704 25853) (26196 28408) (28651 29535) (29613 30120) (30172 31252) (31306 32268) (32320 33296) (33462 34346) (34398 35418) (35932 37670) (38553 40566) (40861 41017) (41212 41313) (41406 41468) (41489 41559) (41585 41709) (41738 41826) (42091 42287) (42377 42502) (42547 42655) (42777 42866) (42921 45539) (45573 46787) (46820 48263) (48301 49518) (49682 50996) (51007 51230) (51324 53239) (53303 55623) (55702 57103) (57153 57708) (58570 59019) (59101 59336) (59556 59920) (60115 60434) (60467 61089) (61122 62000) (62296 63052) (63103 63490) (63674 64068) (64101 64661) (64781 65274)))
 :END:
 
 * RB's dot files
 
-@rb This repo contains my Emacs initialization files:
+@rb This repo contains my Emacs initialization file (init.el) and
+personal packages (rb-*.el).
 
-=init.el= bootstraps packages, sets UI/behavior defaults, wires in
-completion (Vertico, Corfu, Orderless, Marginalia, Embark/Consult),
-project navigation (Projectile, Perspective), programming language
-support (LSP + many major modes), Lisp/AI workflows (Lispy, SLY/CIDER,
-GPTel with backend switching), org/org-roam/jira helpers, custom
-hydras, and private-local-mode hooks.
+*How to run all unit tests:*
 
-=rb-tools.el= defines helper utilities exposed as GPTel tools (nREPL
-eval, Tree-sitter helpers, line/range replacement, ripgrep, fd,
-read/write file) plus shared parsers/validation for Tree-sitter-based
-edits.
+First reload all files you changed with the help of the =elisp_eval= tool:
+
+#+begin_src elisp
+  (progn
+    ; load all the files you changed, for example:
+    (load "rb-gptel.el")
+    (load "rb-tools.el"))
+#+end_src
+
+Then run the unit tests via =ert=:
+
+#+begin_src elisp
+(progn (require 'ert) (ert t))
+#+end_src
 
 ** Add emacs_eval tool
 
@@ -823,11 +829,11 @@ These changes give us safer anchoring (regex/markers), context checks, and struc
    of updated RANGE specs with the following fields:
    1. =start= and =end=: copied from input
    2. =text=: text between lines =start= and =end=
-   3. =text_hash=: MD5 hash of the text between =start= and =end=
+   3. =texthash=: MD5 hash of the text between =start= and =end=
 2. =update_line_ranges= takes PATH and RANGES with the following RANGE
    spec:
    1. =start= and =end=
-   2. =text_hash= or =old_text= used to verify that the referenced range is really there
+   2. =texthash= or =old_text= used to verify that the referenced range is really there
    3. =new_text= for the replacement text
 
 My feeling is that if I replaced =replace_line_ranges= with these two
@@ -841,7 +847,7 @@ Here are the main design questions/decisions we should settle before drafting th
 1) API contract and validation
 - Ranges: ensure start/end are 1-based, start ≤ end, inclusive end. Reject overlapping or unsorted ranges? (replace_line_ranges currently sorts/merges—should these mimic it?)
 - Behavior when ranges partially/fully out of file bounds?
-- Handling both text_hash and old_text in update_line_ranges: allow both? prioritize hash? require at least one?
+- Handling both texthash and old_text in update_line_ranges: allow both? prioritize hash? require at least one?
 - Should update_line_ranges fail fast on first mismatch or report all mismatches? What does the return shape look like (OK + maybe updated ranges?).
 
 2) Text and hashing details
@@ -855,7 +861,7 @@ Here are the main design questions/decisions we should settle before drafting th
 - If multiple ranges are provided, can they overlap? If yes, in what order do we apply replacements (ascending start)? If no, enforce non-overlap.
 
 4) Return values and errors
-- get_line_ranges: return list of {start end text text_hash}; what error if a range is invalid (missing lines, inverted, etc.)?
+- get_line_ranges: return list of {start end text texthash}; what error if a range is invalid (missing lines, inverted, etc.)?
 - update_line_ranges: return OK plus maybe the applied ranges; explicit error codes/messages for: file not found, range out of bounds, hash/text mismatch, overlapping ranges, empty new_text allowed?
 
 5) Consistency with existing toolset
@@ -870,7 +876,7 @@ Reject unsorted ranges? No, just sort them in decreasing order of starting line 
 
 When ranges partially/fully out of file bounds: reject
 
-In update: if both text_hash and old_text are defined, check both. If only one is there, check only that.
+In update: if both texthash and old_text are defined, check both. If only one is there, check only that.
 
 Should update_line_ranges fail fast on first mismatch or report all mismatches? Fail fast
 
@@ -886,7 +892,7 @@ Should get_line_ranges include a trailing newline in text when the file ends wit
 
 Should update_line_ranges be all-or-nothing (no partial writes if one range mismatches)? yes, all-or-nothing
 
-get_line_ranges: return list of {start end text text_hash}; what error if a range is invalid (missing lines, inverted, etc.)? Generally if there is an error, just throw it via (error ...) and let gptel figure out how to report this to the LLM
+get_line_ranges: return list of {start end text texthash}; what error if a range is invalid (missing lines, inverted, etc.)? Generally if there is an error, just throw it via (error ...) and let gptel figure out how to report this to the LLM
 
 update_line_ranges: return OK plus maybe the applied ranges; explicit error codes/messages for: file not found, range out of bounds, hash/text mismatch, overlapping ranges, empty new_text allowed? no need for explicit error codes, just the message varies which you give to (error ...)
 
@@ -928,11 +934,11 @@ Here are the tasks for STORY-4-robust-line-range-tools:
 
 I’ve added an inline API design contract (comments) for =get_line_ranges= and =update_line_ranges= in =rb-tools.el= (just above the line-range utilities). It spells out:
 
-- Args and shapes for both functions (path + ranges; ranges carry :start/:end inclusive; =update_line_ranges= also has :new_text and optional :text_hash / :old_text).
+- Args and shapes for both functions (path + ranges; ranges carry :start/:end inclusive; =update_line_ranges= also has :new_text and optional :texthash / :old_text).
 - Validation: readable/writable as appropriate, integers, start<=end>=1, out-of-bounds rejected, overlaps rejected, and normalization by sorting descending by :start.
 - Semantics: hash over raw bytes of the exact slice; no normalization; verification rules (hash and/or old_text, both must match when supplied); fail fast on mismatch.
 - Application: apply in-memory descending, write once (all-or-nothing) after checks pass.
-- Return shapes: =get_line_ranges= returns (:start :end :text :text_hash); =update_line_ranges= returns (:start :end :updated t) in normalized order.
+- Return shapes: =get_line_ranges= returns (:start :end :text :texthash); =update_line_ranges= returns (:start :end :updated t) in normalized order.
 - Deprecation note: =replace_line_ranges= is to be removed once the new tools land; tests/docs should target the new API.
 
 Let me know if you want this phrased differently (e.g., docstrings instead of comments, or additional clarifications about hash algorithm name, marker behavior, or error messages).
@@ -952,8 +958,8 @@ Here’s what I changed for TASK-4-2 (“Implement get_line_ranges tool”) and 
   - =rb-tools--normalize-line-range-specs= to validate/sort ranges descending by start, reject out-of-bounds/overlaps, and optionally require =:new_text= or verification keys.
 
 - Added new tools:
-  - =get_line_ranges=: validates ranges, returns =(:start :end :text :text_hash)= (MD5 of exact slice) in normalized order.
-  - =update_line_ranges=: validates ranges, requires verification (=:text_hash= and/or =:old_text=), checks existing slices, applies edits in-memory in descending order, writes once on success, returns =(:start :end :updated t)= in normalized order.
+  - =get_line_ranges=: validates ranges, returns =(:start :end :text :texthash)= (MD5 of exact slice) in normalized order.
+  - =update_line_ranges=: validates ranges, requires verification (=:texthash= and/or =:old_text=), checks existing slices, applies edits in-memory in descending order, writes once on success, returns =(:start :end :updated t)= in normalized order.
 
 *Notes*
 - I left the old =replace_line_ranges= and its tests in place (not yet removed/deprecated in code/presets), per the “remove once new tools land” note; if you want, I can now remove/deprecate it and update presets/tests accordingly.
@@ -1040,7 +1046,7 @@ Here’s a concrete plan for adding the two Tree-sitter anchored insertion tools
 Plan (concise)
 1) API shape & semantics
    - Add two tools: tree_sitter_insert_after_node(path, node_selector, text) and tree_sitter_insert_before_node(path, node_selector, text).
-   - node selector: accept either a node’s text_hash (preferred) or a starting line number. If both are provided (optional), verify both; otherwise use one.
+   - node selector: accept either a node’s texthash (preferred) or a starting line number. If both are provided (optional), verify both; otherwise use one.
    - Behavior: parse file, locate the node, compute insertion point (start or end), splice text, reparse to ensure a valid parse, indent inserted text region.
    - Failure modes: fail if node not found, ambiguous (multiple nodes with same hash), parse fails after insert, or file missing.
 
@@ -1098,7 +1104,7 @@ Here’s the story and tasks:
 Here’s what I did for TASK-5-2 (Tree-sitter anchored insert tools):
 
 Summary
-- Added core insertion helper rb-tools--ts-insert-relative to insert before/after a resolved node (selector by :line and/or :text_hash), perform the splice, optionally format, reparse to ensure syntax, then write only on success. Returns insertion and node metadata.
+- Added core insertion helper rb-tools--ts-insert-relative to insert before/after a resolved node (selector by :line and/or :texthash), perform the splice, optionally format, reparse to ensure syntax, then write only on success. Returns insertion and node metadata.
 - Exposed two tools:
   - rb-tools-ts-insert-before-node
   - rb-tools-ts-insert-after-node
@@ -1274,163 +1280,8 @@ Let me know if there’s anything else you’d like to address here.
 
 I’ve moved the dedicated regression tests from =rb-tools-test.el= into =rb-tools.el= right next to the rest of the helper utilities and supporting tests, so there’s no longer a separate file to manage. The standalone test file has been deleted since its contents now live inside =rb-tools.el=, keeping the provenance of the added regex-based insert tests close to the implementation they’re guarding. I didn’t run the ERT suite here, so please let me know if you’d like me to execute anything.
 
-@rb
+** Increase test coverage in rb-file.el
 
-** Reorganize rb-tools.el
+@rb @code Read =rb-file.el= and maximize test coverage of the functions in that file.
 
-*** Planning
-
-@rb @plan The rb-tools.el file is quite big now.
-
-I would like you to analyze its contents and write a plan for its
-reorganization: how functions could be better grouped, ordered, maybe
-renamed to make the file easier to read and understand.
-
-
-@ai
-
-Thanks for the context, RB. =rb-tools.el= is doing a lot of heavy lifting right now, and it’s pretty understandable that it feels unwieldy. I’ve gone through the file, and here’s how I think it could be reorganized to make it easier to read, reason about, and maintain:
-
----
-
-**** 1. *Top-level layout by responsibility*
-Right now there’s a single monolithic file with sections sprinkled in (comments, helpers, tools). I’d break it into clearly delineated sections in the following order:
-
-1. *Utility helpers & core predicates* (=rb-tools--truthy?=, =rb-tools--line-range-boundaries=, etc.)
-2. *Configuration & IO injection* (=rb-tools-*-function= vars + =rb-tools--io-read/write-file=)
-3. *External adapters* (Clojure eval, Elisp eval, Bash eval, =rg=, =fd=, etc.)
-4. *Tree-sitter helpers* (helpers for parsing, validation, node selection, node updates/inserts)
-5. *Line-range / regex insert helpers* (line range utils, =rb-tools-get/update-line-ranges=, regex helpers + insert functions)
-6. *Object store support* (JSON schema helpers, object store operations, =find_objects= etc.)
-7. *Tool registration* (=gptel-make-tool= calls)
-8. *Presets*
-9. *Tests/test helpers* — ideally moved to a separate =rb-tools-test.el=, but if they must stay, keep them at the end.
-
-Rationale: grouping by feature makes it easier to “jump” to the part of the file you care about. Right now we bounce between disparate concerns (Tree-sitter, regex, JSON, tools) in a single stream. Clear sections also help with future refactors (picking which parts belong in helper modules, splitting into multiple files, etc.).
-
----
-
-**** 2. *Stronger separation within Tree-sitter section*
-The Tree-sitter helpers could be split into logical subsections:
-
-- *Parsing helpers* (=rb-tools--ts-node-successfully-parsed?=, =rb-tools--ts-node-parse-errors=, =rb-tools--ts-with-root=)
-- *Node introspection* (=rb-tools--ts-collect-root-children=, =rb-tools--ts-format-list-nodes=, =rb-tools--ts-select-nodes-by-line=, =rb-tools--ts-resolve-node=)
-- *Public APIs* (=rb-tools-ts-list-nodes=, =rb-tools-ts-get-nodes=, =rb-tools-ts-update-nodes=, =rb-tools-ts-insert-before-node=, =rb-tools-ts-insert-after-node=)
-- *Pure helpers* (=rb-tools--ts-list-nodes-pure=, =rb-tools--ts-get-nodes-pure=)
-
-Also, consider renaming some helpers to better reflect intent, e.g.:
-
-- =rb-tools--ts-collect-root-children= → =rb-tools--ts-root-child-metadata=
-- =rb-tools--ts-format-list-nodes= → =rb-tools--ts-node-info-with-preview=
-- =rb-tools--ts-with-root= → =rb-tools--with-ts-buffer-root=
-
-Giving them clearer names makes the code more self-documenting, especially because these helpers are reused heavily by the tool definitions.
-
----
-
-**** 3. *Line-range / regex helpers cleanup*
-These guts are reliable, but the order is a bit scattered. Within the “line/regex” section:
-
-- Keep general helpers (=rb-tools--line-range-boundaries=, =rb-tools--line-range-slice=, =rb-tools--normalize-line-range-specs=) grouped and documented together.
-- Move =rb-tools-get-line-ranges= and =rb-tools-update-line-ranges= directly after the helpers.
-- The regex helper functions (=rb-tools--regex-match--…=, =rb-tools--regex-insert=, =rb-tools-insert-before-regex=, etc.) should follow, grouped into:
-  - Matching helpers (=rb-tools--regex-match--parse-rg-line=, =--closest=, =--matches-for-file=, =--describe=, =--info=)
-  - Action helpers (=rb-tools--regex-insert=, =rb-tools-insert-before-regex=, =rb-tools-insert-after-regex=)
-  - Validation helpers (=rb-tools--regex-insert--validate-buffer=)
-
-This layout keeps “what can locate a range” close to “what can mutate a range”.
-
----
-
-**** 4. *Object store / schema helpers split*
-The JSON schema helpers, object store logic, and =find/insert/update= APIs are closely related but currently interleaved with nothing to signal the boundaries. I’d do the following:
-
-- Move *schema helpers* (=rb-tools--json-key->string=, =rb-tools--normalize-json-object=, etc.) into their own sub-section before the =cl-defmethods=.
-- Keep =rb-tools-get-json-schema-for-class= (public facade) immediately after the methods.
-- Then begin the *object store* section (project root helpers, sanitize path, filesystem read/write, =insert-object=, =get-object=, =update-object=, =find-objects=).
-
-Also, the helper =rb-tools--sanitize-path-component= could be renamed to =rb-tools--safe-path-component= for readability, and =rb-tools--object-store-base-dir= should probably be closer to the functions that need it.
-
----
-
-**** 5. *Tool registration & presets at the end*
-The =gptel-make-tool= and =gptel-make-preset= calls are “configuration of tools” and don’t contain algorithmic logic. Leave them near the bottom of the file, after all helpers are defined, and group them:
-
-1. Tool definitions (Eval tools, Tree-sitter tools, File/line tools, Object store tools)
-2. Presets (in the order they depend on one another)
-3. End-of-file comment
-
-This keeps the “what tools exist” summary accessible while leaving the logic above untouched.
-
----
-
-**** 6. *Tests should live elsewhere*
-There’s a large block of =ert= tests at the end of =rb-tools.el=. If we follow “functional core, imperative shell,” these tests should probably live in a separate =rb-tools-test.el= file (perhaps under =tests/= if warranted). At minimum, move them fully to the end after the presets. If splitting files is feasible, the main file can =require= the test file only in test contexts. That keeps the core helper file focused on functionality, not verification.
-
----
-
-**** 7. *Naming consistency*
-- Many functions start with =rb-tools--=, but a few (like =rb-tools-clojure-eval=, =rb-tools-rg=) use =-= vs =--= inconsistently. =--= is traditionally for internal helpers; consider making it consistent: =rb-tools--rg= could be private if not exposed externally (but since it’s exposed as a tool, keep it public). Maybe we can adopt this guideline:
-  - Public functions (exposed via tools or expected to be called elsewhere) use =rb-tools-<name>=.
-  - Internal helpers use =rb-tools--<name>=.
-
-- Helper names like =rb-tools--truthy?= and =rb-tools--object-from-args= are fine, but consider renaming =rb-tools--multi-form-fixture= (test helper) to =rb-tools--fixture-multi-form= for readability.
-
-- For tool commands, we already mirror tool names; keep that mapping explicit.
-
----
-
-**** 8. *Optional: Factor out modules*
-If future maintenance becomes difficult, consider splitting the file into smaller modules. For example:
-- =rb-tools-exec.el= for evaluation helpers.
-- =rb-tools-ts.el= for Tree-sitter helpers.
-- =rb-tools-store.el= for object store logic.
-- =rb-tools-tools.el= for =gptel= integrations.
-
-This would require adjusting load paths but would significantly reduce the single-file size. For now, reorganizing within the file might be sufficient; splitting can come later if the maintenance burden grows.
-
----
-
-Would you like me to draft a formal STORY/TASK description describing this refactor plan, or should we iterate more on the plan details before locking it in?
-
-@rb @plan I would like to split rb-tools.el into several files based on functional groups. The tests for each group should be in the corresponding file.
-
-
-@ai
-
-Thanks for the clarification, RB. I’ve created the story *STORY-7-split-rb-tools* along with the first two tasks that document how the split should look and begin extracting the evaluation helpers into their own module. Here’s where we stand:
-
-- *Story:* “Split rb-tools.el into modular files” with a crisp description and implementation plan covering the new modules, relocation of tests, and reduced entry point.
-- *Tasks:*
-  1. =TASK-7-1-define-split-plan= captures the mapping of functions/tests to the new modules and the shared configuration that must stay visible to =rb-tools.el=.
-  2. =TASK-7-2-move-eval-helpers= focuses on moving the truthiness/eval helpers into =rb-tools-eval.el=, ensuring dependencies and tests travel with them.
-
-Would you like me to continue breaking down the remaining modules (Tree-sitter helpers, IO/regex tools, JSON schema/object store) into additional tasks following the same pattern, or do you want to refine the plan further before we proceed?
-
-@rb @plan All planning should be done here. There should be no planning tasks like TASK-7-1.
-
-The whole implementation plan should be in the implementation_plan
-field of STORY-7 and TASKS should get the task-specific details in
-their descriptions.
-
-
-@ai
-
-Thanks for the clarification. Here’s where we now stand:
-
-- *Story =STORY-7-split-rb-tools=* captures the full implementation plan inside its =implementation_plan= field. It prescribes the four new modules (=rb-tools-eval.el=, =rb-tools-ts.el=, =rb-tools-io.el=, =rb-tools-store.el=), moving functionality/tests into them, keeping =rb-tools.el= as a thin aggregator that still defines the GPTel tools/presets, and re-running each module’s test group to make sure the tool wiring remains intact.
-
-- *Tasks created under that story* now each describe a concrete implementation chunk:
-  1. =TASK-7-1-define-split-plan= (“Wire rb-tools.el to the new modules”) focuses on replacing the monolith with an aggregator that requires the new files while keeping the tool definitions intact.
-  2. =TASK-7-2-move-eval-helpers= (“Extract evaluation helpers into rb-tools-eval”) isolates the truthiness and eval helpers and their tests into a dedicated module that exports the same API for the GPTel tools.
-  3. =TASK-7-3-tree-sitter-module= (“Extract Tree-sitter helpers into rb-tools-ts”) moves parser helpers, node APIs, and Tree-sitter insert/update operations plus their regression tests into a self-contained module.
-  4. =TASK-7-4-io-regex-module= (“Extract IO/regex helpers into rb-tools-io”) moves line-range, regex, ripgrep/fd, and read/write utilities with their tests into their module.
-  5. =TASK-7-6-eval-tests= (“Add module-specific tests”) ensures each module co-locates its ERT coverage and documents how to run it.
-
-All implementation planning now lives in the story’s =implementation_plan=, and each task description contains the specific work needed for that module. Let me know if you’d like me to flesh out additional tasks (e.g., for the store module or specific test moves) or if we’re ready to start executing these tasks.
-
-@rb
-
-*** TASK-7-1
-
-@rb @code
+This is a one-off assignment, don't care about the story or tasks now.

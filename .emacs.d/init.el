@@ -940,6 +940,25 @@
     ("e" rb--hydra-emacs/body "emacs"))
   :bind ("<f12>" . rb--hydra-top/body))
 
+;; my own packages
+
+;; add init.el directory to load path
+(let* ((initialization-file-path (file-truename (or load-file-name buffer-file-name)))
+       (initialization-file-dir (file-name-directory initialization-file-path)))
+  (add-to-list 'load-path initialization-file-dir))
+
+(use-package rb-bash)
+(use-package rb-clojure)
+(use-package rb-elisp)
+(use-package rb-fd)
+(use-package rb-file)
+(use-package rb-gptel)
+(use-package rb-io)
+(use-package rb-object-store)
+(use-package rb-rg)
+(use-package rb-tools)
+(use-package rb-ts)
+
 ;; context-specific settings
 
 (let ((context (cond ((file-exists-p (expand-file-name "~/.work")) :work)
@@ -1023,9 +1042,3 @@
   (setq gptel-model (pcase context
                       (:work 'gpt-5.2)
                       (:home 'openai/gpt-5.1-codex-mini))))
-
-;; addons
-
-(let ((init-dir (file-name-directory (file-truename (or load-file-name buffer-file-name)))))
-  (load (expand-file-name "rb-gptel.el" init-dir))
-  (load (expand-file-name "rb-tools.el" init-dir)))
