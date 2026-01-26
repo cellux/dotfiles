@@ -449,6 +449,7 @@
   :defer t
   :custom
   (flycheck-temp-prefix ".flycheck")
+  (flycheck-emacs-lisp-load-path 'inherit)
   :hook (prog-mode . flycheck-mode))
 
 (use-package vterm
