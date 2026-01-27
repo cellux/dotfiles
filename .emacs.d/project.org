@@ -4,7 +4,7 @@
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
 :GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node insert_before_regex insert_after_regex get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (2479 2747) (2973 3076) (3224 4065) (4430 4986) (5068 6475) (6542 7022) (7080 7773) (7866 8428) (8491 9169) (9437 9687) (9738 9983) (10549 10963) (11019 11363) (11547 12018) (14246 14795) (14943 15218) (15300 15510) (15611 16198) (16293 16686) (16814 16968) (17194 17574) (17662 17856) (18060 18574) (18927 19137) (19345 19524) (19664 19906) (19969 20108) (20403 21281) (21349 21801) (21852 22296) (22704 25853) (26196 28408) (28651 29535) (29613 30120) (30172 31252) (31306 32268) (32320 33296) (33462 34346) (34398 35418) (35932 37670) (38553 40566) (40861 41017) (41212 41313) (41406 41468) (41489 41559) (41585 41709) (41738 41826) (42091 42287) (42377 42502) (42547 42655) (42777 42866) (42921 45539) (45573 46787) (46820 48263) (48301 49518) (49682 50996) (51007 51230) (51324 53239) (53303 55623) (55702 57103) (57153 57708) (58570 59019) (59101 59336) (59556 59920) (60115 60434) (60467 61089) (61122 62000) (62296 63052) (63103 63490) (63674 64068) (64101 64661) (64781 65274)))
+:GPTEL_BOUNDS: ((response (2523 2791) (3017 3120) (3268 4109) (4474 5030) (5112 6519) (6586 7066) (7124 7817) (7910 8472) (8535 9213) (9481 9731) (9782 10027) (10593 11007) (11063 11407) (11591 12062) (14290 14839) (14987 15262) (15344 15554) (15655 16242) (16337 16730) (16858 17012) (17238 17618) (17706 17900) (18104 18618) (18971 19181) (19389 19568) (19708 19950) (20013 20152) (20447 21325) (21393 21845) (21896 22340) (22748 25897) (26240 28452) (28695 29579) (29657 30164) (30216 31296) (31350 32312) (32364 33340) (33506 34390) (34442 35462) (35976 37714) (38597 40610) (40905 41061) (41256 41357) (41450 41512) (41533 41603) (41629 41753) (41782 41870) (42135 42331) (42421 42546) (42591 42699) (42821 42910) (42965 45583) (45617 46831) (46864 48307) (48345 49562) (49726 51040) (51051 51274) (51368 53283) (53347 55667) (55746 57147) (57197 57752) (58614 59063) (59145 59380) (59600 59964) (60159 60478) (60511 61133) (61166 62044) (62340 63096) (63147 63534) (63718 64112) (64145 64705) (64825 65318)))
 :END:
 
 * RB's dot files
@@ -23,10 +23,10 @@ First reload all files you changed with the help of the =elisp_eval= tool:
     (load "rb-tools.el"))
 #+end_src
 
-Then run the unit tests via =ert=:
+Then run the unit tests via =rb-tools-run-all-ert-tests-and-report=:
 
 #+begin_src elisp
-(progn (require 'ert) (ert t))
+(rb-tools-run-all-ert-tests-and-report)
 #+end_src
 
 ** Add emacs_eval tool
@@ -1280,8 +1280,8 @@ Let me know if there’s anything else you’d like to address here.
 
 I’ve moved the dedicated regression tests from =rb-tools-test.el= into =rb-tools.el= right next to the rest of the helper utilities and supporting tests, so there’s no longer a separate file to manage. The standalone test file has been deleted since its contents now live inside =rb-tools.el=, keeping the provenance of the added regex-based insert tests close to the implementation they’re guarding. I didn’t run the ERT suite here, so please let me know if you’d like me to execute anything.
 
-** Increase test coverage in rb-file.el
+** Increase test coverage in rb-object-store.el
 
-@rb @code Read =rb-file.el= and maximize test coverage of the functions in that file.
+@rb @code Read =rb-object-store.el= and maximize test coverage of the functions in that file.
 
 This is a one-off assignment, don't care about the story or tasks now.

@@ -6,6 +6,7 @@
 
 ;;; Code:
 
+(require 'ert)
 (require 'project)
 
 (defun rb-tools-project-root ()
@@ -57,6 +58,7 @@ SEP defaults to : (colon)."
     (nreverse plist)))
 
 ;; Minimal harness helpers for filesystem/buffer isolation ----------------
+
 (defmacro rb-tools-with-temp-dir (dir-sym &rest body)
   "Bind DIR-SYM to a fresh temp directory and evaluate BODY.
 The directory is cleaned up on exit."
@@ -76,6 +78,23 @@ Cleans up the directory afterwards."
        (let ((,file-sym (expand-file-name "tmp" ,dir)))
          (write-region "" nil ,file-sym nil 'silent)
          ,@body))))
+
+(defun rb-tools-run-all-ert-tests-and-report ()
+  "Run all defined ERT test cases and return the report as a string."
+  (let ((out (generate-new-buffer " *rb-tools-ert-report*"))
+        (ert-quiet t))
+    (unwind-protect
+        (cl-letf (((symbol-function 'message)
+                   (lambda (fmt &rest args)
+                     (when fmt
+                       (with-current-buffer out
+                         (insert (apply #'format fmt args) "\n"))))))
+          ;; Run all tests (selector t).
+          (ert-run-tests-batch t)
+          (with-current-buffer out
+            (buffer-string)))
+      (when (buffer-live-p out)
+        (kill-buffer out)))))
 
 (provide 'rb-tools)
 ;;; rb-tools.el ends here
