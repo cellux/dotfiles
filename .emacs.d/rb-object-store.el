@@ -26,7 +26,9 @@ current project root.")
 
 (defun rb-object-store--object-key->keyword (key)
   "Return KEY as a keyword."
-  (rb-tools-ensure-keyword key))
+  (if (keywordp key)
+      key
+    (intern (format ":%s" key))))
 
 (defun rb-object-store--object-key->string (key)
   "Return KEY as a string, dropping the leading colon for keywords."

@@ -42,21 +42,6 @@ SEP defaults to : (colon)."
           (setq result (concat result "\n")))
         result))))
 
-(defun rb-tools-ensure-keyword (x)
-  "Coerces X into a keyword."
-  (if (keywordp x)
-      x
-    (intern (format ":%s" x))))
-
-(defun rb-tools-alist-to-keyword-plist (alist)
-  "Return ALIST converted to a plist with keyword keys, preserving order."
-  (let ((plist '()))
-    (dolist (entry alist)
-      (pcase-let ((`(,k . ,v) entry))
-        (push (rb-tools-ensure-keyword k) plist)
-        (push v plist)))
-    (nreverse plist)))
-
 ;; Minimal harness helpers for filesystem/buffer isolation ----------------
 
 (defmacro rb-tools-with-temp-dir (dir-sym &rest body)
