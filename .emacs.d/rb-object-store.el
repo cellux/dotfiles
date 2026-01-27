@@ -222,30 +222,37 @@ Populated only after the task has been completed.")
          (id-part (rb-object-store--sanitize-path-component id)))
     (expand-file-name (format "%s/%s" class-part id-part) base-dir)))
 
+(defun rb-object-store--properties-from-args (properties)
+  "Translates PROPERTIES as taken from a tool arg into a plist.
+PROPERTIES is a list of objects, each a plist with :name/:value keys and
+string values."
+  (let* ((seen (make-hash-table :test #'equal))
+         (result nil))
+    (dolist (prop properties)
+      (let ((name (plist-get prop :name))
+            (value (plist-get prop :value)))
+        (unless (stringp name)
+          (error "Property name must be a string"))
+        (unless (stringp value)
+          (error "Property value must be a string"))
+        (when (member name '("class" "id"))
+          (error "Property %s is reserved" name))
+        (when (gethash name seen)
+          (error "Duplicate property: %s" name))
+        (puthash name t seen)
+        (push (rb-object-store--object-key->keyword name) result)
+        (push value result)))
+    (nreverse result)))
+
 (defun rb-object-store--object-from-args (class id properties)
   "Build an object plist from CLASS, ID and PROPERTIES.
-CLASS and ID are strings, PROPERTIES is a plist of name/value pairs."
+CLASS and ID are strings, PROPERTIES is a list of objects, each a plist
+with :name/:value keys and string values."
   (unless (stringp class)
     (error "CLASS must be a string"))
   (unless (stringp id)
     (error "ID must be a string"))
-  (let* ((seen (make-hash-table :test #'eq))
-         (object (list :class class :id id)))
-    (puthash :class t seen)
-    (puthash :id t seen)
-    (cl-loop
-     for (name value) on properties by #'cddr do
-     (unless (keywordp name)
-       (error "Property name must be a keyword"))
-     (unless (stringp value)
-       (error "Property value must be a string"))
-     (when (memq name '(:class :id))
-       (error "Property %s is reserved" name))
-     (when (gethash name seen)
-       (error "Duplicate property: %s" name))
-     (puthash name t seen)
-     (plist-put object name value))
-    object))
+  (apply #'list :class class :id id (rb-object-store--properties-from-args properties)))
 
 (defun rb-object-store--write-object-to-filesystem (object &optional overwrite)
   "Persist OBJECT plist to the object store.
@@ -279,9 +286,9 @@ already exists."
 (defun rb-object-store-insert-object (class id properties)
   "Insert a new OBJECT into the store.
 
-CLASS (string), ID (string), and PROPERTIES (plist of name/value
-pairs) are validated against class schema and written to the object
-store.
+CLASS (string), ID (string), and PROPERTIES (list of objects with
+name/value fields) are validated against class schema and written to the
+object store.
 
 Returns the validated object plist."
   (let* ((object (rb-object-store--object-from-args class id properties))
@@ -293,7 +300,7 @@ Returns the validated object plist."
 (defun rb-object-store-get-object (class id &optional properties)
   "Retrieve an object from the store.
 
-CLASS and ID identify the object.  PROPERTIES, if provided, is an
+CLASS and ID identify the object.  PROPERTIES, if provided, is a
 array/list of property names to return; when omitted, all properties are
 returned.  The result is a plist with keyword keys."
   (let* ((object-dir (rb-object-store--object-dir class id))
@@ -324,9 +331,9 @@ returned.  The result is a plist with keyword keys."
 (defun rb-object-store-update-object (class id properties)
   "Update an existing object in the store.
 
-CLASS (string), ID (string), and PROPERTIES (plist of name/value
-pairs) are combined into a single object.  Only the provided properties
-are validated and updated; other properties remain unchanged.
+CLASS (string), ID (string), and PROPERTIES (list of objects with
+name/value fields) are combined into a single object.  Only the provided
+properties are validated and updated; other properties remain unchanged.
 
 Returns the full updated object as a plist."
   (let* ((schema (rb-object-store-get-json-schema-for-class class))
@@ -337,11 +344,7 @@ Returns the full updated object as a plist."
     (let* ((object (rb-object-store-get-object class id)))
       ;; Apply updates
       (cl-loop
-       for (name value) on properties by #'cddr do
-       (unless (and (keywordp name))
-         (error "Property name must be a keyword"))
-       (when (memq name '(:class :id))
-         (error "Property %s is reserved" name))
+       for (name value) on (rb-object-store--properties-from-args properties) by #'cddr do
        (let ((definition (plist-get (plist-get schema :properties) name)))
          (unless definition
            (error "Unknown property for class %s: %s" class name))
@@ -370,8 +373,9 @@ Returns the full updated object as a plist."
 Returns only objects satisfying all provided search criteria.
 
 ID, when supplied, is treated as a regex matched against the object's id
-property.  PROPERTIES, when supplied, is a plist of name/value pairs
-where VALUE is a regex matched against the property's content.
+property.  PROPERTIES, when supplied, is a list of objects with
+name/value fields where VALUE is a regex matched against the property's
+content.
 
 Returns a list of matching objects or nil if none were found."
   (unless (stringp class)
@@ -383,7 +387,7 @@ Returns a list of matching objects or nil if none were found."
          (class-dir (expand-file-name class-filename base-dir)))
     (unless (file-directory-p class-dir)
       (cl-return-from rb-object-store-find-objects nil))
-    (let* ((filters (seq-into properties 'list))
+    (let* ((filters (rb-object-store--properties-from-args properties))
            (candidates (rb-object-store--list-object-ids class)))
       (unless candidates
         (cl-return-from rb-object-store-find-objects nil))
@@ -470,18 +474,22 @@ Returns a list of matching objects or nil if none were found."
   (should-error (rb-object-store--sanitize-path-component "")))
 
 (ert-deftest rb-object-store--object-from-args/validates-reserved-and-duplicates ()
-  (let ((valid (rb-object-store--object-from-args "STORY" "STORY-1" (list :name "Example"))))
+  (let ((valid (rb-object-store--object-from-args "STORY" "STORY-1"
+                                                  '((:name "name" :value "Example")))))
     (should (equal valid '(:class "STORY" :id "STORY-1" :name "Example"))))
-  (should-error (rb-object-store--object-from-args "TASK" "TASK-1" (list :class "TASK")))
-  (should-error (rb-object-store--object-from-args "TASK" "TASK-1" (list :name "A" :name "B"))))
+  (should-error (rb-object-store--object-from-args "TASK" "TASK-1"
+                                                   '((:name "class" :value "TASK"))))
+  (should-error (rb-object-store--object-from-args "TASK" "TASK-1"
+                                                   '((:name "name" :value "A")
+                                                     (:name "name" :value "B")))))
 
 (ert-deftest rb-object-store-insert-update-and-get-object ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
       (let ((inserted (rb-object-store-insert-object
                        "STORY" "STORY-1-test"
-                       (list :name "First"
-                             :description "details"))))
+                       '((:name "name" :value "First")
+                         (:name "description" :value "details")))))
         (should (equal (plist-get inserted :class) "STORY"))
         (should (equal (plist-get inserted :id) "STORY-1-test"))
         (should (equal (plist-get inserted :name) "First"))
@@ -489,27 +497,29 @@ Returns a list of matching objects or nil if none were found."
         (let ((retrieved (rb-object-store-get-object "STORY" "STORY-1-test")))
           (should (equal (plist-get retrieved :name) "First")))
         (let ((updated (rb-object-store-update-object "STORY" "STORY-1-test"
-                                                      (list :name "Updated"
-                                                            :description "details-2"))))
+                                                      '((:name "name" :value "Updated")
+                                                        (:name "description" :value "details-2")))))
           (should (equal (plist-get updated :name) "Updated"))
           (should (equal (plist-get updated :description) "details-2"))))
-      (should-error (rb-object-store-update-object "STORY" "STORY-1-test" (list :class "STORY"))))))
+      (should-error (rb-object-store-update-object "STORY" "STORY-1-test"
+                                                   '((:name "class" :value "STORY")))))))
 
 (ert-deftest rb-object-store-find-objects/filters-and-returns-nil ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-1-search" (list :name "First"))
-      (rb-object-store-insert-object "STORY" "STORY-2-search" (list :name "Second"))
+      (rb-object-store-insert-object "STORY" "STORY-1-search" '((:name "name" :value "First")))
+      (rb-object-store-insert-object "STORY" "STORY-2-search" '((:name "name" :value "Second")))
       (should (equal (length (rb-object-store-find-objects "STORY" nil nil)) 2))
       (should (equal (length (rb-object-store-find-objects "STORY" "STORY-1" nil)) 1))
-      (should (equal (length (rb-object-store-find-objects "STORY" nil (list :name "Second"))) 1))
+      (should (equal (length (rb-object-store-find-objects "STORY" nil '(( :name "name"
+                                                                           :value "Second")))) 1))
       (should-not (rb-object-store-find-objects "STORY" "UNKNOWN" nil)))))
 
 (ert-deftest rb-object-store-find-objects/list-object-ids-parallel-to-insert ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-3-list" (list :name "Listing"))
-      (rb-object-store-insert-object "STORY" "STORY-4-list" (list :name "Listing"))
+      (rb-object-store-insert-object "STORY" "STORY-3-list" '((:name "name" :value "Listing")))
+      (rb-object-store-insert-object "STORY" "STORY-4-list" '((:name "name" :value "Listing")))
       (let ((ids (rb-object-store--list-object-ids "STORY")))
         (should (member "STORY-3-list" ids))
         (should (member "STORY-4-list" ids))))))
@@ -522,14 +532,14 @@ Returns a list of matching objects or nil if none were found."
 (ert-deftest rb-object-store-find-objects/property-filter-invalid ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-5-filter" (list :name "Filter"))
-      (should-error (rb-object-store-find-objects "STORY" nil (list nil "x"))))))
+      (rb-object-store-insert-object "STORY" "STORY-5-filter" '((:name "name" :value "Filter")))
+      (should-error (rb-object-store-find-objects "STORY" nil '((:name nil :value "x")))))))
 
 (ert-deftest rb-object-store-find-objects/name-filter-empty-regex ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-6-filter" (list :name "Filter"))
-      (should-error (rb-object-store-find-objects "STORY" nil (list :name ""))))))
+      (rb-object-store-insert-object "STORY" "STORY-6-filter" '((:name "name" :value "Filter")))
+      (should-error (rb-object-store-find-objects "STORY" nil '((:name "name" :value "")))))))
 
 (ert-deftest rb-object-store-get-json-schema-for-class/accepts-string-argument ()
   (let ((schema (rb-object-store-get-json-schema-for-class "STORY")))
@@ -538,8 +548,10 @@ Returns a list of matching objects or nil if none were found."
 (ert-deftest rb-object-store-update-object/unknown-property-error ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-7-update" (list :name "Update"))
-      (should-error (rb-object-store-update-object "STORY" "STORY-7-update" (list :foo "bar"))))))
+      (rb-object-store-insert-object "STORY" "STORY-7-update"
+                                     '((:name "name" :value "Update")))
+      (should-error (rb-object-store-update-object "STORY" "STORY-7-update"
+                                                   '((:name "foo" :value "bar")))))))
 
 (ert-deftest rb-object-store--property-value-satisfies-type-p/handles-supported-types ()
   (should (rb-object-store--property-value-satisfies-type-p "foo" "string"))
@@ -577,20 +589,51 @@ Returns a list of matching objects or nil if none were found."
 (ert-deftest rb-object-store-get-object/returns-requested-properties ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-11" (list :name "Name" :description "Desc"))
-      (let ((subset (rb-object-store-get-object "STORY" "STORY-11" (list :name))))
+      (rb-object-store-insert-object "STORY" "STORY-11" '((:name "name" :value "Name")
+                                                          (:name "description" :value "Desc")))
+      (let ((subset (rb-object-store-get-object "STORY" "STORY-11" (list "name"))))
         (should (equal (plist-get subset :name) "Name"))
         (should-not (plist-get subset :description))))))
 
 (ert-deftest rb-object-store-get-object/error-on-missing-requested-property ()
   (rb-tools-with-temp-dir root
     (let ((rb-object-store-root root))
-      (rb-object-store-insert-object "STORY" "STORY-12" (list :name "Name" :description "Desc"))
+      (rb-object-store-insert-object "STORY" "STORY-12" '((:name "name" :value "Name")
+                                                          (:name "description" :value "Desc")))
       (let* ((object-dir (rb-object-store--object-dir "STORY" "STORY-12"))
              (file (expand-file-name (rb-object-store--sanitize-path-component "description")
                                      object-dir)))
         (delete-file file)
-        (should-error (rb-object-store-get-object "STORY" "STORY-12" (list :description)))))))
+        (should-error (rb-object-store-get-object "STORY" "STORY-12" (list "description")))))))
+
+(ert-deftest rb-object-store--properties-from-args/converts-to-keyword-plist ()
+  (should (equal (rb-object-store--properties-from-args
+                  '((:name "name" :value "Name")
+                    (:name "description" :value "Desc")))
+                 '(:name "Name" :description "Desc"))))
+
+(ert-deftest rb-object-store-get-json-schema-for-class/errors-on-invalid-class ()
+  (should-error (rb-object-store-get-json-schema-for-class nil)))
+
+(ert-deftest rb-object-store--base-dir/respects-root-override ()
+  (rb-tools-with-temp-dir root
+    (let ((rb-object-store-root root))
+      (should (string= (rb-object-store--base-dir)
+                       (expand-file-name ".store" root))))))
+
+(ert-deftest rb-object-store-insert-object/validates-class-and-id-types ()
+  (rb-tools-with-temp-dir root
+    (let ((rb-object-store-root root))
+      (should-error (rb-object-store-insert-object 1 "STORY-1"
+                                                   '((:name "name" :value "Name"))))
+      (should-error (rb-object-store-insert-object "STORY" 1
+                                                   '((:name "name" :value "Name")))))))
+
+(ert-deftest rb-object-store-find-objects/id-filter-invalid-type ()
+  (should-error (rb-object-store-find-objects "STORY" 1 nil)))
+
+(ert-deftest rb-object-store-find-objects/id-filter-empty-string ()
+  (should-error (rb-object-store-find-objects "STORY" "" nil)))
 
 (provide 'rb-object-store)
 ;;; rb-object-store.el ends here
