@@ -1,0 +1,1 @@
+As the maintainer of my Emacs toolkit, I want the tree-sitter helpers in `rb-ts.el` covered by exhaustive ERT tests so I can rely on them during refactors and tooling changes.

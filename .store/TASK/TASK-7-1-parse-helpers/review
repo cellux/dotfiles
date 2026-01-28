@@ -1,0 +1,12 @@
+Implemented comprehensive ERT tests for the Tree-sitter parsing helpers in `rb-ts.el`.
+
+What went well:
+- Covered success and error cases for `rb-ts--node-successfully-parsed?` and `rb-ts--node-parse-errors` using both valid and malformed ELisp roots.
+- Exercised `rb-ts-parse-buffer` through temporary buffers to ensure mode detection, success callbacks, unsupported-mode errors, and diagnostic reporting all behave as expected.
+- Exercised `rb-ts-with-root` for readable files plus the read/write guards, keeping the fixtures and temp files isolated.
+
+Challenges:
+- Relied on Tree-sitter support being ready for `elisp`, so all tests guard with `skip-unless (treesit-ready-p 'elisp t)` to keep the suite stable.
+
+Lessons learned:
+- The helper suite is already resilient to parsing failures; the tests now codify that behavior and document how the helpers should respond to invalid syntax.

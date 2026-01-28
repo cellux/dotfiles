@@ -1,0 +1,9 @@
+Completed focused ERT coverage for the listing and selection helpers in `rb-ts.el`.
+
+What went well:
+- Added exercises for `rb-ts--collect-root-children`, `rb-ts-list-nodes`, and `rb-ts-get-nodes` using the multi-form fixture to assert line/kind/hash/preview metadata, preview customization, and ordering expectations.
+- Verified that `rb-ts-get-nodes` reports a helpful error when a requested line has no matching node.
+- Guarded all new tests with `skip-unless (treesit-ready-p 'elisp t)` so the suite stays green even when Tree-sitter support is missing.
+
+Lessons learned:
+- The existing pure helpers already behave deterministically when walking roots, which made the tests easy to reason about and kept the fixtures concise.

@@ -1,0 +1,4 @@
+1. Inventory the functions in `rb-ts.el` that currently lack tests, focusing on selectors (`rb-ts--resolve-node`), listing/getting nodes, parse helpers, and update/insert operations.
+2. Build reusable fixtures (e.g., multi-form Emacs Lisp files) and helper expectations to drive Tree-sitter parsing while keeping the tests fast in memory.
+3. Write ERT tests that exert each helper under both success and failure conditions, ensuring they correctly accept selectors, surface diagnostics, honor formatting/dry-run switches, and parse/re-parse files before persisting edits.
+4. Verify the new tests run cleanly (skipping when Tree-sitter language support is missing) and document the approach so future contributors know how to exercise this suite.

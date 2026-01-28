@@ -4,7 +4,7 @@
 :GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
 :GPTEL_MAX_TOKENS: 32768
 :GPTEL_TOOLS: clojure_eval elisp_eval bash_eval tree_sitter_list_nodes tree_sitter_get_nodes tree_sitter_update_nodes tree_sitter_insert_before_node tree_sitter_insert_after_node insert_before_regex insert_after_regex get_line_ranges update_line_ranges read_file write_file rg fd get_json_schema_for_class insert_object get_object update_object find_objects WebSearch WebFetch YouTube Diagnostics TodoWrite Agent
-:GPTEL_BOUNDS: ((response (2523 2791) (3017 3120) (3268 4109) (4474 5030) (5112 6519) (6586 7066) (7124 7817) (7910 8472) (8535 9213) (9481 9731) (9782 10027) (10593 11007) (11063 11407) (11591 12062) (14290 14839) (14987 15262) (15344 15554) (15655 16242) (16337 16730) (16858 17012) (17238 17618) (17706 17900) (18104 18618) (18971 19181) (19389 19568) (19708 19950) (20013 20152) (20447 21325) (21393 21845) (21896 22340) (22748 25897) (26240 28452) (28695 29579) (29657 30164) (30216 31296) (31350 32312) (32364 33340) (33506 34390) (34442 35462) (35976 37714) (38597 40610) (40905 41061) (41256 41357) (41450 41512) (41533 41603) (41629 41753) (41782 41870) (42135 42331) (42421 42546) (42591 42699) (42821 42910) (42965 45583) (45617 46831) (46864 48307) (48345 49562) (49726 51040) (51051 51274) (51368 53283) (53347 55667) (55746 57147) (57197 57752) (58614 59063) (59145 59380) (59600 59964) (60159 60478) (60511 61133) (61166 62044) (62340 63096) (63147 63534) (63718 64112) (64145 64705) (64825 65318)))
+:GPTEL_BOUNDS: ((response (2565 2833) (3059 3162) (3310 4151) (4516 5072) (5154 6561) (6628 7108) (7166 7859) (7952 8514) (8577 9255) (9523 9773) (9824 10069) (10635 11049) (11105 11449) (11633 12104) (14332 14881) (15029 15304) (15386 15596) (15697 16284) (16379 16772) (16900 17054) (17280 17660) (17748 17942) (18146 18660) (19013 19223) (19431 19610) (19750 19992) (20055 20194) (20489 21367) (21435 21887) (21938 22382) (22790 25939) (26282 28494) (28737 29621) (29699 30206) (30258 31338) (31392 32354) (32406 33382) (33548 34432) (34484 35504) (36018 37756) (38639 40652) (40947 41103) (41298 41399) (41492 41554) (41575 41645) (41671 41795) (41824 41912) (42177 42373) (42463 42588) (42633 42741) (42863 42952) (43007 45625) (45659 46873) (46906 48349) (48387 49604) (49768 51082) (51093 51316) (51410 53325) (53389 55709) (55788 57189) (57239 57794) (58656 59105) (59187 59422) (59642 60006) (60201 60520) (60553 61175) (61208 62086) (62382 63138) (63189 63576) (63760 64154) (64187 64747) (64867 65360) (65802 67085) (67127 67834) (67882 68683)))
 :END:
 
 * RB's dot files
@@ -1285,3 +1285,52 @@ I’ve moved the dedicated regression tests from =rb-tools-test.el= into =rb-too
 @rb @code Read =rb-object-store.el= and maximize test coverage of the functions in that file.
 
 This is a one-off assignment, don't care about the story or tasks now.
+
+** Increase test coverage in rb-ts.el
+
+@rb @plan Read =rb-ts.el= and make a plan on how to maximize test
+coverage of the functions in that file.
+
+Break it down to tasks which are small enough to fit into your context.
+
+@ai
+
+I read through =rb-ts.el= and, to satisfy the goal of maximizing its test coverage, I created STORY-7 (“Improve rb-ts test coverage”) along with a trio of focused tasks:
+
+1. *TASK-7-1* – “Test parse helpers and buffers”: Exercises the low-level helpers (=rb-ts--node-successfully-parsed?=, =rb-ts--node-parse-errors=, =rb-ts-parse-buffer=, =rb-ts-with-root=) using fixtures that cover both valid and invalid syntax as well as the read/write guards.
+2. *TASK-7-2* – “Test listing and selection helpers”: Targets the collection/formatting helpers plus the user-facing helpers =rb-ts-list-nodes= and =rb-ts-get-nodes=, asserting correct metadata, previews, hashes, and error handling for missing-line selectors.
+3. *TASK-7-3* – “Test node resolution and updates”: Covers =rb-ts--resolve-node=, =rb-ts-update-nodes=, and the insert helpers, ensuring hash/line selectors, formatting options, dry runs, parse validation, and failure paths (e.g., ambiguous hash, parse errors, missing selectors) are all captured.
+
+Each task is designed to be self-contained and small enough for an independent implementer. Let me know if you’d like me to split any of these further or to expand the implementation plan for the story, otherwise we can proceed with assigning these tasks to the coding phase.
+
+*** Implement TASK-7-1
+
+@rb @code
+
+@ai
+
+Implemented TASK-7-1-parse-helpers as requested.
+
+Changes:
+- Added ERT tests that cover the parsing helpers in =rb-ts.el=:
+  - Validates =rb-ts--node-successfully-parsed?= and =rb-ts--node-parse-errors= with both good and malformed ELisp.
+  - Exercises =rb-ts-parse-buffer= for successful parsing, callback invocation, unsupported major-mode handling, and error diagnostics.
+  - Tests =rb-ts-with-root= for readable files and the readable/writable guards.
+- Updated the TASK review to describe what went well, challenges encountered, and lessons learned.
+
+All tests that depend on Tree-sitter guard with =(skip-unless (treesit-ready-p 'elisp t))= to avoid failures when the language support isn’t available.
+
+@rb
+
+*** Implement TASK-7-2
+
+@rb @code
+
+
+@ai
+
+I implemented TASK-7-2 by extending =rb-ts.el= with ERT coverage for the listing and selection helpers. The new tests exercise =rb-ts--collect-root-children= against the multi-form fixture, verify that =rb-ts-list-nodes= honors the preview-line parameter and reports the expected metadata, and confirm that =rb-ts-get-nodes= returns the requested form texts/hashes while failing if the caller asks for a non-existent line. All new tests guard their execution with =skip-unless (treesit-ready-p 'elisp t)= so our suite stays stable even when the Elisp grammar isn’t available. After running the full ERT suite (=rb-tools-run-all-ert-tests-and-report=), everything passes. The task’s =review= field has been populated accordingly to describe what went well, how things were handled, and what we learned.
+
+*** Implement TASK-7-3
+
+@rb @code
