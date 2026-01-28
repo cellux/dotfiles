@@ -1038,6 +1038,7 @@
                                            x-ai/grok-code-fast-1
                                            z-ai/glm-4.6
                                            z-ai/glm-4.7
+                                           z-ai/glm-4.7-flash
                                            z-ai/glm-4.6v)))))
   (setq gptel-model (pcase context
                       (:work 'gpt-5.2)
