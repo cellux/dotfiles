@@ -1006,6 +1006,7 @@
                                            mistralai/voxtral-small-24b-2507
                                            moonshotai/kimi-k2-0905
                                            moonshotai/kimi-k2-thinking
+                                           moonshotai/kimi-k2.5
                                            openai/gpt-5.1
                                            openai/gpt-5.1-chat
                                            openai/gpt-5.1-codex
