@@ -92,7 +92,7 @@
   (electric-indent-mode 0)
 
   ;; turn on syntax highlighting
-  (global-font-lock-mode)
+  (global-font-lock-mode 1)
 
   ;; use Google's Noto Color Emoji font for emojis if available
   (let ((noto-color-emoji (font-spec :family "Noto Color Emoji")))
