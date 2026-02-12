@@ -501,8 +501,8 @@ _General instructions_
    conversations.
 
 3. The tools which you are using have been mostly developed by me. They
-   may be buggy. If a tool does work as advertised, stop immediately and
-   report the problem so that I have a chance to fix it.
+   may be buggy. If a tool does not work as advertised, stop immediately
+   and report the problem so that I have a chance to fix it.
 
 _Development guidelines_
 
