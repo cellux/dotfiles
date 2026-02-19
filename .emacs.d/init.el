@@ -592,16 +592,6 @@
   (clang-format+-always-enable t)
   (clang-format-style "LLVM"))
 
-(use-package flycheck-clang-analyzer
-  :ensure t
-  :defer t
-  :hook ((c-mode c++-mode) . flycheck-clang-analyzer-setup))
-
-(use-package flycheck-clang-tidy
-  :ensure t
-  :defer t
-  :hook ((c-mode c++-mode) . flycheck-clang-tidy-setup))
-
 (use-package forth-mode
   :ensure t
   :defer t
