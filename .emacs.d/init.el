@@ -664,7 +664,8 @@
   :ensure t
   :defer t
   :mode "\\.rs\\'"
-  :hook (rust-mode . lsp))
+  :hook (rust-mode . lsp)
+  :custom (rust-format-on-save t))
 
 (use-package cargo
   :ensure t
