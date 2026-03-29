@@ -631,6 +631,12 @@
   :mode "\\.lua\\'"
   :interpreter "lua")
 
+(use-package fennel-mode
+  :ensure t
+  :defer t
+  :mode "\\.fnl\\'"
+  :interpreter "fennel")
+
 (use-package nim-mode
   :ensure t
   :defer t
