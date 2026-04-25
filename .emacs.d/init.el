@@ -913,7 +913,7 @@
   :config
   (defhydra rb--hydra-dired (:exit t)
     "rb directories"
-    ("p" (dired (car (prune-directory-list '("~/projects" "~/Projects")))) "projects")
+    ("p" (dired (car (prune-directory-list '("~/projects" "~/Projects" "~/Projektek")))) "projects")
     ("s" (dired (car (prune-directory-list '("~/src" "~/Software/src")))) "src")
     ("o" (dired "~/org") "org")
     ("q" (dired "~/quicklisp/local-projects") "quicklisp/local")
